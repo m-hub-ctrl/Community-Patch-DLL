@@ -26,6 +26,9 @@
 #define MOD_DLL_VERSION_NUMBER ((uint) 151)
 #define MOD_DLL_VERSION_STATUS ""			// a (alpha), b (beta) or blank (released)
 #define MOD_DLL_CUSTOM_BUILD_NAME ""
+// MPPATCH: build ID of our multiplayer patch (<VP release>-mp<n>). Logged at startup, readable from Lua (Game.GetMPPatchVersion)
+// and announced when a game starts or loads (chat in MP), so friends with mismatched installs notice before playing. Bump per release.
+#define MPPATCH_VERSION "5.4.8-mp1"
 
 /// IMPORTANT NOTES: Do NOT disable CustomModOptions by commenting out the defines in this file. This could cause the DLL to break. Instead, switch off the CustomModOption in the database by setting it to 0.
 /// Do not use #if defined(MOD_OPTION) to selectively enable code elsewhere in the DLL. Use if (MOD_OPTION) instead - this will cause the code to only run if the associated option is set to 1 in the database.

@@ -248,6 +248,8 @@ void CvDllGameContext::InitializeSingleton()
 	CUSTOMLOG("Supporting %i major civilizations", MAX_MAJOR_CIVS);
 	//identify the build
 	CUSTOMLOG("Gamecore was built from git version %s\n", CURRENT_GAMECORE_VERSION);
+	// MPPATCH: identify our patch build in CustomMods.log (the harness checks this line)
+	CUSTOMLOG("MPPATCH version %s\n", MPPATCH_VERSION);
 #endif
 }
 //------------------------------------------------------------------------------

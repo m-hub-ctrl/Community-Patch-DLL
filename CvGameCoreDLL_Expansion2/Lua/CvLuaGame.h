@@ -512,6 +512,9 @@ protected:
 	LUAAPIEXTN(WriteMPMP, bool, strFileName, strDatabase, bInitialize);
 	LUAAPIEXTN(CopyModDataToMPMP, bool, strModFolder, strId, strVersion);
 	LUAAPIEXTN(AddUIAddinToMPMP, bool, strUIFileName, strAddinFileName);
+
+	// MPPATCH: our patch build ID (MPPATCH_VERSION), for UI scripts and the test harness
+	static int lGetMPPatchVersion(lua_State* L);
 };
 
 #endif //CVLUAGAME_H

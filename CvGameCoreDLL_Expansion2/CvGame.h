@@ -329,6 +329,8 @@ public:
 
 	bool isPlayerOptionsSent() const;
 	void sendPlayerOptions(bool bForce = false);
+	// MPPATCH: show our build ID once per started/loaded game
+	void announceMPPatchVersion();
 
 	PlayerTypes getActivePlayer() const;
 	void setActivePlayer(PlayerTypes eNewValue, bool bForceHotSeat = false, bool bAutoplaySwitch = false);
@@ -873,6 +875,7 @@ protected:
 	bool m_bPbemTurnSent;
 	bool m_bHotPbemBetweenTurns;
 	bool m_bPlayerOptionsSent;
+	bool m_bMPPatchVersionAnnounced; // MPPATCH: not saved; UI-only, never affects game state
 	bool m_bNukesValid;
 	bool m_bEndGameTechResearched;
 	bool m_bTunerEverConnected;

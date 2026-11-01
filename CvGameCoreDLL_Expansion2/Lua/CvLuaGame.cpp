@@ -524,6 +524,8 @@ void CvLuaGame::RegisterMembers(lua_State* L)
 	Method(WriteMPMP);
 	Method(CopyModDataToMPMP);
 	Method(AddUIAddinToMPMP);
+
+	Method(GetMPPatchVersion); // MPPATCH
 }
 //------------------------------------------------------------------------------
 
@@ -4263,3 +4265,11 @@ LUAAPIIMPL(Game, CreateMPMP)
 LUAAPIIMPL(Game, WriteMPMP)
 LUAAPIIMPL(Game, CopyModDataToMPMP)
 LUAAPIIMPL(Game, AddUIAddinToMPMP)
+
+//------------------------------------------------------------------------------
+// MPPATCH: string Game.GetMPPatchVersion()
+int CvLuaGame::lGetMPPatchVersion(lua_State* L)
+{
+	lua_pushstring(L, MPPATCH_VERSION);
+	return 1;
+}

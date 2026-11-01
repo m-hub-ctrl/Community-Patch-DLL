@@ -1220,6 +1220,7 @@ void CvGame::uninit()
 	m_bPbemTurnSent = false;
 	m_bHotPbemBetweenTurns = false;
 	m_bPlayerOptionsSent = false;
+	m_bMPPatchVersionAnnounced = false; // MPPATCH: re-announce after every new game / load (not saved)
 	m_bNukesValid = false;
 	m_bEndGameTechResearched = false;
 	m_bTunerEverConnected = false;
@@ -1663,6 +1664,7 @@ void CvGame::update()
 
 		{
 			sendPlayerOptions();
+			announceMPPatchVersion(); // MPPATCH
 
 			//this creates the initial autosave
 			if(getTurnSlice() == 0 && !isPaused())
@@ -6270,6 +6272,28 @@ void CvGame::sendPlayerOptions(bool bForce)
 		}
 		gDLL->EndSendBundle();
 	}
+}
+
+//	--------------------------------------------------------------------------------
+// MPPATCH: tell the local player which patch build they run, once per started/loaded game.
+// In network MP each PC also posts its own build to chat, so a mismatched install is visible to everyone.
+// UI and chat only: nothing here touches game state or the synced random number generator.
+void CvGame::announceMPPatchVersion()
+{
+	if(m_bMPPatchVersionAnnounced || getActivePlayer() == NO_PLAYER)
+	{
+		return;
+	}
+	m_bMPPatchVersionAnnounced = true;
+
+	CvString strText = CvString::format("MPPATCH %s", MPPATCH_VERSION);
+	// shown 3x longer than a normal event message so it is hard to miss
+	DLLUI->AddMessage(0, getActivePlayer(), true, 3 * /*10*/ GD_INT_GET(EVENT_MESSAGE_TIME), strText.c_str());
+	if(isNetworkMultiPlayer())
+	{
+		gGlobals.getDLLIFace()->sendChat(strText, CHATTARGET_ALL, NO_PLAYER);
+	}
+	CUSTOMLOG("Announced %s (network MP: %d)", strText.c_str(), isNetworkMultiPlayer() ? 1 : 0);
 }
 
 
