@@ -235,6 +235,14 @@ int CvNotifications::AddByName(const char* pszNotificationName, const char* strM
 /// Adds a new notification to the list
 int CvNotifications::Add(NotificationTypes eNotificationType, const char* strMessage, const char* strSummary, int iX, int iY, int iGameDataIndex, int iExtraGameData)
 {
+	// MPPATCH: drop forensics log: connection notifications, incl. the EXE's "reconnected" after a hot join
+	if (eNotificationType == NOTIFICATION_PLAYER_DISCONNECTED || eNotificationType == NOTIFICATION_PLAYER_CONNECTING ||
+		eNotificationType == NOTIFICATION_PLAYER_RECONNECTED || eNotificationType == NOTIFICATION_PLAYER_KICKED)
+	{
+		GC.getGame().mpPatchNetLog(CvString::format("NOTIFICATION %s about player %d: %s",
+			eNotificationType == NOTIFICATION_PLAYER_DISCONNECTED ? "disconnected" : eNotificationType == NOTIFICATION_PLAYER_CONNECTING ? "connecting" :
+			eNotificationType == NOTIFICATION_PLAYER_RECONNECTED ? "reconnected" : "kicked", iGameDataIndex, strSummary ? strSummary : "").c_str());
+	}
 	// if the player is not human, do not record
 	if(!GET_PLAYER(m_ePlayer).isHuman(ISHUMAN_NOTIFICATIONS))
 	{

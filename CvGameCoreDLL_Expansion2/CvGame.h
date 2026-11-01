@@ -334,6 +334,9 @@ public:
 	// MPPATCH: test mode for the automated test harness. Dormant unless MPPATCH_TEST.ini exists.
 	void mpPatchTestModeOnUpdate();
 	void mpPatchTestModeOnTurn();
+	// MPPATCH: always-on drop forensics log (<Documents>\My Games\Sid Meier's Civilization 5\MPPatch_Net.log).
+	// File output only: never touches game state or the synced random number generator.
+	void mpPatchNetLog(const char* szMsg) const;
 
 	PlayerTypes getActivePlayer() const;
 	void setActivePlayer(PlayerTypes eNewValue, bool bForceHotSeat = false, bool bAutoplaySwitch = false);

@@ -49064,6 +49064,9 @@ bool CvPlayer::isLocalPlayer() const
 void CvPlayer::disconnected()
 {
 	bool isMultiplayer = GC.getGame().isGameMultiPlayer();
+	// MPPATCH: drop forensics log
+	GC.getGame().mpPatchNetLog(CvString::format("PLAYER %d (%s) disconnected: kicked %d, human %d, observer %d, local %d",
+		GetID(), getNickName(), gDLL->IsPlayerKicked(GetID()) ? 1 : 0, isHuman() ? 1 : 0, isObserver() ? 1 : 0, isLocalPlayer() ? 1 : 0).c_str());
 	if(isMultiplayer && isHuman() && !isLocalPlayer())
 	{
 			//log message for debugging the occasional lack of disconnect notification when Steam p2p connections timeout. - bolson 1/10/13
@@ -49116,6 +49119,9 @@ void CvPlayer::disconnected()
 //	-----------------------------------------------------------------------------------------------
 void CvPlayer::reconnected()
 {
+	// MPPATCH: drop forensics log
+	GC.getGame().mpPatchNetLog(CvString::format("PLAYER %d (%s) reconnected (slot back to human), local %d",
+		GetID(), getNickName(), isLocalPlayer() ? 1 : 0).c_str());
 	//Preserve observer status for the connecting human player's slot.
 	if(CvPreGame::slotStatus(GetID()) != SS_OBSERVER){
 		CvPreGame::setSlotStatus(GetID(), SS_TAKEN);

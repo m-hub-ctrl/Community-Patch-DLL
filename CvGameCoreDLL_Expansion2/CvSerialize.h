@@ -345,6 +345,11 @@ public:
 				
 				gGlobals.getDLLIFace()->netMessageDebugLog(logMsg.str());
 				gGlobals.getGame().setDesynced(true);
+				// MPPATCH: drop forensics log: the first desynced variable of each turn (the cascade stays in the net log)
+				if (s_firstDesyncPerTurn[currentTurn].first == this->name())
+				{
+					gGlobals.getGame().mpPatchNetLog(("DESYNC detected (first this turn): " + logMsg.str().substr(0, 400)).c_str());
+				}
 			}
 			else if (desyncCount == 1)
 			{

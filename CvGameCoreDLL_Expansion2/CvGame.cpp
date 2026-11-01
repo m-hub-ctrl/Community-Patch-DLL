@@ -6302,12 +6302,25 @@ void CvGame::announceMPPatchVersion()
 		gGlobals.getDLLIFace()->sendChat(strText, CHATTARGET_ALL, NO_PLAYER);
 	}
 	CUSTOMLOG("Announced %s (network MP: %d)", strText.c_str(), isNetworkMultiPlayer() ? 1 : 0);
+
+	// MPPATCH: drop forensics log: one line per started/loaded game, with who is human and connected
+	CvString strHumans;
+	for (int iI = 0; iI < MAX_MAJOR_CIVS; iI++)
+	{
+		const PlayerTypes ePlayer = static_cast<PlayerTypes>(iI);
+		if (CvPreGame::slotStatus(ePlayer) == SS_TAKEN || CvPreGame::slotStatus(ePlayer) == SS_OBSERVER)
+			strHumans += CvString::format(" %d(%s%s)", iI, CvPreGame::nicknameDisplayed(ePlayer).c_str(),
+				gDLL->IsPlayerConnected(ePlayer) ? "" : ",not connected");
+	}
+	mpPatchNetLog(CvString::format("GAME running: gamecore %s, network MP %d, host %d, active player %d, humans:%s",
+		CURRENT_GAMECORE_VERSION, isNetworkMultiPlayer() ? 1 : 0, gDLL->IsHost() ? 1 : 0, getActivePlayer(),
+		strHumans.empty() ? " none" : strHumans.c_str()).c_str());
 }
 
 //	--------------------------------------------------------------------------------
 // MPPATCH: test mode for the automated test harness (harness/run.ps1).
 // Dormant unless <Documents>\My Games\Sid Meier's Civilization 5\MPPATCH_TEST.ini exists; friends never have it.
-// Control file lines: "Turns=<n>" (default 10), "QuickSaveAtEnd=1" (default 0).
+// Control file lines: "Turns=<n>" (default 10). "QuickSaveAtEnd=1" is ignored (saving inside doTurn hangs the game).
 // When active, in a single-player or hot-seat game: AI autoplay for n turns, a state dump per turn
 // (debugSyncChecksum -> Logs\AssetsTurnNNN.txt, needs LoggingEnabled = 1), and in MPPATCH_TEST\ next to the
 // control file: log.txt, heartbeat.txt (rewritten each turn) and DONE (after n turns).
@@ -6350,6 +6363,38 @@ static void MPPatchTestHeartbeat(int iTurn, int iDone, int iTotal)
 	MPPatchTestWrite(L"heartbeat.txt", strBeat.c_str(), false);
 }
 
+//	--------------------------------------------------------------------------------
+// MPPATCH: always-on drop forensics log (P1 step 1.6), so every real game shows whether a drop was a crash, a
+// failed resync or the network: game start/load, turn start/end with processing time, player disconnect /
+// connecting / reconnect, desync detection, force-resync requests. One line each, local time + build ID, in
+// <Documents>\My Games\Sid Meier's Civilization 5\MPPatch_Net.log (independent of LoggingEnabled). Over 2 MB it is
+// moved to MPPatch_Net.old.log at the first write of a game session. File output only: no game state, no RNG.
+void CvGame::mpPatchNetLog(const char* szMsg) const
+{
+	static bool s_bRotated = false;
+	std::wstring strFile = MPPatchUserDir() + L"MPPatch_Net.log";
+	if (!s_bRotated)
+	{
+		s_bRotated = true;
+		WIN32_FILE_ATTRIBUTE_DATA kInfo;
+		if (GetFileAttributesExW(strFile.c_str(), GetFileExInfoStandard, &kInfo) && (kInfo.nFileSizeHigh > 0 || kInfo.nFileSizeLow > 2 * 1024 * 1024))
+		{
+			std::wstring strOld = MPPatchUserDir() + L"MPPatch_Net.old.log";
+			MoveFileExW(strFile.c_str(), strOld.c_str(), MOVEFILE_REPLACE_EXISTING);
+		}
+	}
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	CvString strLine = CvString::format("[%04d-%02d-%02d %02d:%02d:%02d.%03d] [%s] T%d %s\n", st.wYear, st.wMonth, st.wDay,
+		st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, MPPATCH_VERSION, getGameTurn(), szMsg);
+	FILE* pFile = NULL;
+	if (_wfopen_s(&pFile, strFile.c_str(), L"a") == 0 && pFile)
+	{
+		fputs(strLine.c_str(), pFile);
+		fclose(pFile);
+	}
+}
+
 void CvGame::mpPatchTestModeOnUpdate()
 {
 	if (m_bMPPatchTestChecked || getActivePlayer() == NO_PLAYER)
@@ -6372,6 +6417,13 @@ void CvGame::mpPatchTestModeOnUpdate()
 			bQuickSave = atoi(szLine + 15) != 0;
 	}
 	fclose(pFile);
+	if (bQuickSave)
+	{
+		// MPPATCH: gDLL->SaveGame(SAVEGAME_QUICK) inside doTurn never returns (the game hangs; P1 step 1.4).
+		// The harness saves from Lua after the autoplay has ended instead (run.ps1 -SaveAtEnd).
+		MPPatchTestLog("QuickSaveAtEnd=1 ignored: saving inside doTurn hangs the game");
+		bQuickSave = false;
+	}
 
 	if (isNetworkMultiPlayer())
 	{
@@ -8552,8 +8604,13 @@ void CvGame::removeGreatPersonBornName(const CvString& szName)
 // Protected Functions...
 
 //	--------------------------------------------------------------------------------
+static DWORD s_uMPPatchTurnProcessingStart = 0; // MPPATCH: drop forensics log timing (not saved, not game state)
+
 void CvGame::doTurn()
 {
+	s_uMPPatchTurnProcessingStart = GetTickCount();
+	mpPatchNetLog("TURN end: processing starts"); // MPPATCH: drop forensics log
+
 	if (MOD_UNIT_KILL_STATS)
 		GC.getMap().DoKillCountDecay();
 
@@ -8818,6 +8875,7 @@ void CvGame::doTurn()
 	LogGameState();
 
 	mpPatchTestModeOnTurn(); // MPPATCH: per-turn dump + heartbeat when test mode is active
+	mpPatchNetLog(CvString::format("TURN start: previous turn processed in %u ms", GetTickCount() - s_uMPPatchTurnProcessingStart).c_str()); // MPPATCH
 
 	if (isNetworkMultiPlayer())
 	{
@@ -11222,6 +11280,9 @@ void CvGame::Read(FDataStream& kStream)
 
 	// used to be a static in updateMoves but made a member due to it not being re-inited and maybe causing issues when loading after an exit-to-menu. Not serialized - I wasn't willing to think about the implications.
 	m_processPlayerAutoMoves = false;
+
+	// MPPATCH: drop forensics log. The EXE calls this for a save load and for a resync (the host's state is sent and read in).
+	mpPatchNetLog(CvString::format("STATE read (save load or resync): network MP %d, host %d", CvPreGame::isNetworkMultiplayerGame() ? 1 : 0, gDLL->IsHost() ? 1 : 0).c_str());
 }
 
 //	--------------------------------------------------------------------------------
@@ -14667,8 +14728,9 @@ bool CvGame::IsExeWantForceResyncAvailable()
 {
 	return MOD_BIN_HOOKS && (m_eExeBinType == BIN_DX11 || m_eExeBinType == BIN_DX9 || m_eExeBinType == BIN_TABLET) && isNetworkMultiPlayer() && gDLL->IsHost();
 }
-void CvGame::SetExeWantForceResyncValue(int value) 
+void CvGame::SetExeWantForceResyncValue(int value)
 {
+	mpPatchNetLog(CvString::format("FORCE RESYNC requested: value %d, available %d", value, IsExeWantForceResyncAvailable() ? 1 : 0).c_str()); // MPPATCH
 	if (IsExeWantForceResyncAvailable())
 	{
 		*s_iExeWantForceResync = value;
