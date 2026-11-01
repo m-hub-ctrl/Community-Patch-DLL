@@ -6308,9 +6308,12 @@ void CvGame::announceMPPatchVersion()
 	for (int iI = 0; iI < MAX_MAJOR_CIVS; iI++)
 	{
 		const PlayerTypes ePlayer = static_cast<PlayerTypes>(iI);
-		if (CvPreGame::slotStatus(ePlayer) == SS_TAKEN || CvPreGame::slotStatus(ePlayer) == SS_OBSERVER)
-			strHumans += CvString::format(" %d(%s%s)", iI, CvPreGame::nicknameDisplayed(ePlayer).c_str(),
-				gDLL->IsPlayerConnected(ePlayer) ? "" : ",not connected");
+		const SlotStatus eStatus = CvPreGame::slotStatus(ePlayer);
+		// unused major slots can also report taken/observer: only list real players and the local one
+		if ((eStatus != SS_TAKEN && eStatus != SS_OBSERVER) || (!GET_PLAYER(ePlayer).isEverAlive() && ePlayer != getActivePlayer()))
+			continue;
+		strHumans += CvString::format(" %d(%s%s%s)", iI, CvPreGame::nicknameDisplayed(ePlayer).c_str(), eStatus == SS_OBSERVER ? ",observer" : "",
+			!isNetworkMultiPlayer() || gDLL->IsPlayerConnected(ePlayer) ? "" : ",not connected");
 	}
 	mpPatchNetLog(CvString::format("GAME running: gamecore %s, network MP %d, host %d, active player %d, humans:%s",
 		CURRENT_GAMECORE_VERSION, isNetworkMultiPlayer() ? 1 : 0, gDLL->IsHost() ? 1 : 0, getActivePlayer(),
@@ -8609,7 +8612,7 @@ static DWORD s_uMPPatchTurnProcessingStart = 0; // MPPATCH: drop forensics log t
 void CvGame::doTurn()
 {
 	s_uMPPatchTurnProcessingStart = GetTickCount();
-	mpPatchNetLog("TURN end: processing starts"); // MPPATCH: drop forensics log
+	mpPatchNetLog("TURN end: all players done, end-of-turn processing starts"); // MPPATCH: drop forensics log
 
 	if (MOD_UNIT_KILL_STATS)
 		GC.getMap().DoKillCountDecay();
@@ -8875,7 +8878,8 @@ void CvGame::doTurn()
 	LogGameState();
 
 	mpPatchTestModeOnTurn(); // MPPATCH: per-turn dump + heartbeat when test mode is active
-	mpPatchNetLog(CvString::format("TURN start: previous turn processed in %u ms", GetTickCount() - s_uMPPatchTurnProcessingStart).c_str()); // MPPATCH
+	// MPPATCH: the time is doTurn only; the AI plays its new turn after this, so wall time per turn = gap between TURN start lines
+	mpPatchNetLog(CvString::format("TURN start: end-of-turn processing took %u ms", GetTickCount() - s_uMPPatchTurnProcessingStart).c_str());
 
 	if (isNetworkMultiPlayer())
 	{
