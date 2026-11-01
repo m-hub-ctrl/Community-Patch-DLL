@@ -81,7 +81,8 @@
       <AdditionalIncludeDirectories>$(SolutionDir)CvGameCoreDLL_Expansion2\;$(SolutionDir)CvWorldBuilderMap\include\;$(SolutionDir)CvGameCoreDLLUtil\include\;$(SolutionDir)CvLocalization\include\;$(SolutionDir)CvGameDatabase\include\;$(SolutionDir)FirePlace\include\;$(SolutionDir)FirePlace\include\FireWorks\;$(SolutionDir)ThirdPartyLibs\Lua51\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>CvGameCoreDLLPCH.h</PrecompiledHeaderFile>
-      <AdditionalOptions>/Oy- /Zm400 %(AdditionalOptions)</AdditionalOptions>
+      <!-- MPPATCH: Zm 400 -> 450: our drop-forensics log calls grew the PCH past the limit (CI asked for -Zm418, run 41362012326) -->
+      <AdditionalOptions>/Oy- /Zm450 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -105,7 +106,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>CvGameCoreDLLPCH.h</PrecompiledHeaderFile>
       <Optimization>Full</Optimization>
-      <AdditionalOptions>/Zm365 %(AdditionalOptions)</AdditionalOptions>
+      <!-- MPPATCH: Zm 365 -> 420: our drop-forensics log calls grew the PCH past the limit (CI asked for -Zm382, run 41362012326) -->
+      <AdditionalOptions>/Zm420 %(AdditionalOptions)</AdditionalOptions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
