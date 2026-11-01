@@ -331,6 +331,9 @@ public:
 	void sendPlayerOptions(bool bForce = false);
 	// MPPATCH: show our build ID once per started/loaded game
 	void announceMPPatchVersion();
+	// MPPATCH: test mode for the automated test harness. Dormant unless MPPATCH_TEST.ini exists.
+	void mpPatchTestModeOnUpdate();
+	void mpPatchTestModeOnTurn();
 
 	PlayerTypes getActivePlayer() const;
 	void setActivePlayer(PlayerTypes eNewValue, bool bForceHotSeat = false, bool bAutoplaySwitch = false);
@@ -876,6 +879,13 @@ protected:
 	bool m_bHotPbemBetweenTurns;
 	bool m_bPlayerOptionsSent;
 	bool m_bMPPatchVersionAnnounced; // MPPATCH: not saved; UI-only, never affects game state
+	// MPPATCH: test mode state; not saved (see mpPatchTestModeOnUpdate)
+	bool m_bMPPatchTestChecked;
+	bool m_bMPPatchTestActive;
+	bool m_bMPPatchTestDone;
+	bool m_bMPPatchTestQuickSave;
+	int m_iMPPatchTestTurns;
+	int m_iMPPatchTestStartTurn;
 	bool m_bNukesValid;
 	bool m_bEndGameTechResearched;
 	bool m_bTunerEverConnected;

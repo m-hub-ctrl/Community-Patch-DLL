@@ -1221,6 +1221,13 @@ void CvGame::uninit()
 	m_bHotPbemBetweenTurns = false;
 	m_bPlayerOptionsSent = false;
 	m_bMPPatchVersionAnnounced = false; // MPPATCH: re-announce after every new game / load (not saved)
+	// MPPATCH: test mode re-checks its control file after every new game / load (not saved)
+	m_bMPPatchTestChecked = false;
+	m_bMPPatchTestActive = false;
+	m_bMPPatchTestDone = false;
+	m_bMPPatchTestQuickSave = false;
+	m_iMPPatchTestTurns = 0;
+	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
 	m_bEndGameTechResearched = false;
 	m_bTunerEverConnected = false;
@@ -1665,6 +1672,7 @@ void CvGame::update()
 		{
 			sendPlayerOptions();
 			announceMPPatchVersion(); // MPPATCH
+			mpPatchTestModeOnUpdate(); // MPPATCH: start test mode if MPPATCH_TEST.ini exists
 
 			//this creates the initial autosave
 			if(getTurnSlice() == 0 && !isPaused())
@@ -6296,6 +6304,121 @@ void CvGame::announceMPPatchVersion()
 	CUSTOMLOG("Announced %s (network MP: %d)", strText.c_str(), isNetworkMultiPlayer() ? 1 : 0);
 }
 
+//	--------------------------------------------------------------------------------
+// MPPATCH: test mode for the automated test harness (harness/run.ps1).
+// Dormant unless <Documents>\My Games\Sid Meier's Civilization 5\MPPATCH_TEST.ini exists; friends never have it.
+// Control file lines: "Turns=<n>" (default 10), "QuickSaveAtEnd=1" (default 0).
+// When active, in a single-player or hot-seat game: AI autoplay for n turns, a state dump per turn
+// (debugSyncChecksum -> Logs\AssetsTurnNNN.txt, needs LoggingEnabled = 1), and in MPPATCH_TEST\ next to the
+// control file: log.txt, heartbeat.txt (rewritten each turn) and DONE (after n turns).
+static std::wstring MPPatchUserDir()
+{
+	// The game's cache folder is <Documents>\My Games\Sid Meier's Civilization 5\cache\; we want its parent.
+	std::string strPath = gDLL->GetCacheFolderPath();
+	while (!strPath.empty() && (strPath[strPath.size() - 1] == '\\' || strPath[strPath.size() - 1] == '/'))
+		strPath.erase(strPath.size() - 1);
+	size_t iPos = strPath.find_last_of("\\/");
+	strPath = (iPos == std::string::npos) ? std::string() : strPath.substr(0, iPos + 1);
+	return CvStringUtils::FromUTF8ToUTF16(strPath);
+}
+
+static void MPPatchTestWrite(const wchar_t* szFile, const char* szText, bool bAppend)
+{
+	std::wstring strDir = MPPatchUserDir() + L"MPPATCH_TEST";
+	CreateDirectoryW(strDir.c_str(), NULL);
+	std::wstring strFile = strDir + L"\\" + szFile;
+	FILE* pFile = NULL;
+	if (_wfopen_s(&pFile, strFile.c_str(), bAppend ? L"a" : L"w") == 0 && pFile)
+	{
+		fputs(szText, pFile);
+		fclose(pFile);
+	}
+}
+
+static void MPPatchTestLog(const CvString& strMsg)
+{
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	CvString strLine = CvString::format("[%04d-%02d-%02d %02d:%02d:%02d] %s\n", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, strMsg.c_str());
+	MPPatchTestWrite(L"log.txt", strLine.c_str(), true);
+	CUSTOMLOG("MPPATCH test: %s", strMsg.c_str());
+}
+
+static void MPPatchTestHeartbeat(int iTurn, int iDone, int iTotal)
+{
+	CvString strBeat = CvString::format("turn=%d done=%d of=%d tick=%u\n", iTurn, iDone, iTotal, GetTickCount());
+	MPPatchTestWrite(L"heartbeat.txt", strBeat.c_str(), false);
+}
+
+void CvGame::mpPatchTestModeOnUpdate()
+{
+	if (m_bMPPatchTestChecked || getActivePlayer() == NO_PLAYER)
+		return;
+	m_bMPPatchTestChecked = true;
+
+	std::wstring strIni = MPPatchUserDir() + L"MPPATCH_TEST.ini";
+	FILE* pFile = NULL;
+	if (_wfopen_s(&pFile, strIni.c_str(), L"r") != 0 || !pFile)
+		return; // the normal case: not a test run
+
+	int iTurns = 10;
+	bool bQuickSave = false;
+	char szLine[256];
+	while (fgets(szLine, sizeof(szLine), pFile))
+	{
+		if (strncmp(szLine, "Turns=", 6) == 0)
+			iTurns = atoi(szLine + 6);
+		else if (strncmp(szLine, "QuickSaveAtEnd=", 15) == 0)
+			bQuickSave = atoi(szLine + 15) != 0;
+	}
+	fclose(pFile);
+
+	if (isNetworkMultiPlayer())
+	{
+		MPPatchTestLog("test mode NOT started: network multiplayer game");
+		return;
+	}
+
+	m_bMPPatchTestActive = true;
+	m_bMPPatchTestQuickSave = bQuickSave;
+	m_iMPPatchTestTurns = std::max(1, iTurns);
+	m_iMPPatchTestStartTurn = getGameTurn();
+	MPPatchTestLog(CvString::format("test mode started: MPPATCH %s, gamecore %s, turn %d, turns %d, quicksave at end %d",
+		MPPATCH_VERSION, CURRENT_GAMECORE_VERSION, m_iMPPatchTestStartTurn, m_iMPPatchTestTurns, bQuickSave ? 1 : 0));
+	MPPatchTestHeartbeat(getGameTurn(), 0, m_iMPPatchTestTurns);
+	debugSyncChecksum();
+
+	// One extra autoplay turn so the AI still has control when DONE is written; the runner closes the game then.
+	setAIAutoPlay(m_iMPPatchTestTurns + 1, NO_PLAYER);
+	if (getAIAutoPlay() > 0)
+		MPPatchTestLog(CvString::format("AI autoplay on, observer is player %d", getActivePlayer()));
+	else
+		MPPatchTestLog("AI autoplay could NOT start (no observer or closed major civ slot)");
+}
+
+void CvGame::mpPatchTestModeOnTurn()
+{
+	if (!m_bMPPatchTestActive || m_bMPPatchTestDone)
+		return;
+
+	int iDone = getGameTurn() - m_iMPPatchTestStartTurn;
+	debugSyncChecksum();
+	MPPatchTestHeartbeat(getGameTurn(), iDone, m_iMPPatchTestTurns);
+	MPPatchTestLog(CvString::format("turn %d reached (%d of %d)", getGameTurn(), iDone, m_iMPPatchTestTurns));
+
+	if (iDone >= m_iMPPatchTestTurns)
+	{
+		m_bMPPatchTestDone = true;
+		if (m_bMPPatchTestQuickSave)
+		{
+			gDLL->SaveGame(SAVEGAME_QUICK);
+			MPPatchTestLog("quicksave requested");
+		}
+		MPPatchTestWrite(L"DONE", CvString::format("turn=%d\n", getGameTurn()).c_str(), false);
+		MPPatchTestLog("DONE");
+	}
+}
+
 
 //	--------------------------------------------------------------------------------
 PlayerTypes CvGame::getActivePlayer() const
@@ -8693,6 +8816,8 @@ void CvGame::doTurn()
 	}
 
 	LogGameState();
+
+	mpPatchTestModeOnTurn(); // MPPATCH: per-turn dump + heartbeat when test mode is active
 
 	if (isNetworkMultiPlayer())
 	{
