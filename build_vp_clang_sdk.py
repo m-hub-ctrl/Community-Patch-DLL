@@ -321,9 +321,21 @@ def print_environment():
     print("INCLUDE:", os.environ.get('INCLUDE', 'Not Set'))
     print("LIB:", os.environ.get('LIB', 'Not Set'))
     print("PATH:", os.environ.get('PATH', 'Not Set'))
+    # MPPATCH: experiment (P0 step 0.7). Show which MSVC version clang-cl assumes in this environment;
+    # the official Clang DLL was built inside the VS2008 environment (MSVC 15.00).
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = os.path.join(tmp, 'probe.cpp')
+        with open(probe, 'w') as f:
+            f.write('int probe_msc_ver = _MSC_VER;\n')
+        result = subprocess.run(f'clang-cl.exe -### -m32 /c "{probe}"', shell=True, capture_output=True, text=True)
+        for line in (result.stdout + result.stderr).split(' '):
+            if 'fms-compatibility-version' in line or 'msvc' in line.lower():
+                print('MPPATCH clang-cl probe:', line.strip('"'))
 
 def build_cl_config_args(config: Config) -> list[str]:
     args = ['-m32', '-msse3', '/c', '/MD', '/GS', '/EHsc', '/fp:precise', '/Zc:wchar_t', '/Zi', '/FS']
+    # MPPATCH: experiment (P0 step 0.7): compile as MSVC 2008 like the official Clang build does.
+    args.append('-fms-compatibility-version=15.00')
     if config == Config.Release:
         args.append('/Ox')
         args.append('/Ob2')
