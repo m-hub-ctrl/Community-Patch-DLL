@@ -8877,7 +8877,10 @@ void CvGame::doTurn()
 	if(GET_PLAYER(getActivePlayer()).isAlive() && !IsStaticTutorialActive())
 	{
 		// Don't show this stuff in MP
-		if(!isReallyNetworkMultiPlayer() && !isPbem() && !isHotSeat())
+		// MPPATCH: nor in harness test mode: the popup's Lua draws from the sync rand (Game.Rand) and only shows for a
+		// living active player, so the virtual-second-client test (P2 2.4) saw 3 extra draws every 25 turns that a
+		// network game never makes (it skips this popup). Test mode is dormant for players (MPPATCH_TEST.ini).
+		if(!isReallyNetworkMultiPlayer() && !isPbem() && !isHotSeat() && !m_bMPPatchTestActive)
 		{
 			int iTurnFrequency = /*25*/ GD_INT_GET(PROGRESS_POPUP_TURN_FREQUENCY);
 
