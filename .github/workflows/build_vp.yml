@@ -22,7 +22,7 @@ jobs:
   get-version:
     name: Extract Version
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20  # MPPATCH: exp/planted-bugs only; full-history clone timed out twice at 5
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
