@@ -1228,6 +1228,8 @@ void CvGame::uninit()
 	m_bMPPatchTestQuickSave = false;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
+	m_iMPPatchPlantBug = 0;   // MPPATCH: planted bugs (exp/planted-bugs only)
+	m_iMPPatchPlantCache = 0; // MPPATCH: cleared on every new game / load, like a cache nobody saves
 	m_bNukesValid = false;
 	m_bEndGameTechResearched = false;
 	m_bTunerEverConnected = false;
@@ -6421,7 +6423,18 @@ void CvGame::mpPatchTestModeOnUpdate()
 			bQuickSave = atoi(szLine + 15) != 0;
 		else if (strncmp(szLine, "ActivePlayer=", 13) == 0)
 			iActivePlayer = atoi(szLine + 13);
+		// MPPATCH: PLANTED BUGS (exp/planted-bugs only, P2 2.5)
+		else if (strncmp(szLine, "PlantBug=activeplayer", 21) == 0)
+			m_iMPPatchPlantBug = 1;
+		else if (strncmp(szLine, "PlantBug=reload", 15) == 0)
+			m_iMPPatchPlantBug = 2;
+		else if (strncmp(szLine, "PlantBug=repeat", 15) == 0)
+			m_iMPPatchPlantBug = 3;
+		else if (strncmp(szLine, "PlantBug=crash", 14) == 0)
+			m_iMPPatchPlantBug = 4;
 	}
+	if (m_iMPPatchPlantBug != 0)
+		MPPatchTestLog(CvString::format("PLANTED BUG %d active (P2 2.5 test build)", m_iMPPatchPlantBug));
 	fclose(pFile);
 	if (bQuickSave)
 	{
@@ -6472,6 +6485,38 @@ void CvGame::mpPatchTestModeOnUpdate()
 
 void CvGame::mpPatchTestModeOnTurn()
 {
+	// MPPATCH: PLANTED BUGS (exp/planted-bugs only, P2 2.5): each one is the bug class its test should catch.
+	// Every turn while test mode is on, also after DONE, so the bookkeeping below can't cause differences by itself.
+	// They run before the dump, so the first dump that should differ is the one written this turn.
+	if (m_bMPPatchTestActive)
+	switch (m_iMPPatchPlantBug)
+	{
+	case 1: // 2.4: synced state changed only for this PC's active player (pattern P1)
+	{
+		CvPlayer& kActive = GET_PLAYER(getActivePlayer());
+		if (kActive.isAlive() && !kActive.isObserver())
+			kActive.GetTreasury()->ChangeGold(1);
+		break;
+	}
+	case 2: // 2.3: an in-memory counter that saves don't keep changes game state (pattern P4): from its 3rd turn on,
+		// player 0 gets +1 gold a turn; a reload resets the counter, so 2 turns of the bonus go missing after it
+		if (++m_iMPPatchPlantCache >= 3)
+			GET_PLAYER((PlayerTypes)0).GetTreasury()->ChangeGold(1);
+		break;
+	case 3: // 2.2: game state depends on timing (true nondeterminism)
+		if (GetTickCount() & 1)
+			GET_PLAYER((PlayerTypes)0).GetTreasury()->ChangeGold(1);
+		break;
+	case 4: // 2.1: crash after 3 turns
+		if (getGameTurn() - m_iMPPatchTestStartTurn >= 3)
+		{
+			MPPatchTestLog("PLANTED BUG: crashing now");
+			volatile int* pNull = NULL;
+			*pNull = 0;
+		}
+		break;
+	}
+
 	if (!m_bMPPatchTestActive || m_bMPPatchTestDone)
 		return;
 

@@ -889,6 +889,9 @@ protected:
 	bool m_bMPPatchTestQuickSave;
 	int m_iMPPatchTestTurns;
 	int m_iMPPatchTestStartTurn;
+	// MPPATCH: PLANTED BUGS (branch exp/planted-bugs only, P2 2.5; never merge). PlantBug=<name> in MPPATCH_TEST.ini.
+	int m_iMPPatchPlantBug;    // 0 none, 1 activeplayer, 2 reload, 3 repeat, 4 crash
+	int m_iMPPatchPlantCache;  // reload bug: in-memory counter that saves don't keep
 	bool m_bNukesValid;
 	bool m_bEndGameTechResearched;
 	bool m_bTunerEverConnected;
