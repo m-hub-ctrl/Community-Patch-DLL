@@ -6411,6 +6411,7 @@ void CvGame::mpPatchTestModeOnUpdate()
 
 	int iTurns = 10;
 	bool bQuickSave = false;
+	int iActivePlayer = NO_PLAYER;
 	char szLine[256];
 	while (fgets(szLine, sizeof(szLine), pFile))
 	{
@@ -6418,6 +6419,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 			iTurns = atoi(szLine + 6);
 		else if (strncmp(szLine, "QuickSaveAtEnd=", 15) == 0)
 			bQuickSave = atoi(szLine + 15) != 0;
+		else if (strncmp(szLine, "ActivePlayer=", 13) == 0)
+			iActivePlayer = atoi(szLine + 13);
 	}
 	fclose(pFile);
 	if (bQuickSave)
@@ -6449,6 +6452,22 @@ void CvGame::mpPatchTestModeOnUpdate()
 		MPPatchTestLog(CvString::format("AI autoplay on, observer is player %d", getActivePlayer()));
 	else
 		MPPatchTestLog("AI autoplay could NOT start (no observer or closed major civ slot)");
+
+	// MPPATCH: "virtual second client" (P2 step 2.4). In a network game every PC has a different active
+	// player; code that changes game state depending on getActivePlayer() desyncs. ActivePlayer=N makes the
+	// AI-played civ N this PC's active player right after autoplay starts, changing nothing else (slots stay
+	// as autoplay set them), so a run with N and a run without must produce identical dumps.
+	if (iActivePlayer != NO_PLAYER && getAIAutoPlay() > 0)
+	{
+		const PlayerTypes eActive = (PlayerTypes)iActivePlayer;
+		if (iActivePlayer >= 0 && iActivePlayer < MAX_MAJOR_CIVS && eActive != getActivePlayer() && GET_PLAYER(eActive).isAlive())
+		{
+			setActivePlayer(eActive, false /*bForceHotSeat*/, false /*bAutoplaySwitch*/);
+			MPPatchTestLog(CvString::format("active player switched to %d (virtual second client)", getActivePlayer()));
+		}
+		else
+			MPPatchTestLog(CvString::format("ActivePlayer=%d ignored (not an alive major civ other than the observer)", iActivePlayer));
+	}
 }
 
 void CvGame::mpPatchTestModeOnTurn()
