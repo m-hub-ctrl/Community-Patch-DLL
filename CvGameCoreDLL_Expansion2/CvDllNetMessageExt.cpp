@@ -94,6 +94,11 @@ namespace NetMessageExt
 					Response::DoClearDealRenewalID(ePlayer1, ePlayer2);
 					break;
 				}
+				case 1007: // MPPATCH: C-005, the "Optimize" great works button
+				{
+					Response::DoSwapGreatWorksHuman(ePlayer, iArg1 == 1);
+					break;
+				}
 			}
 			return true;
 		}
@@ -142,6 +147,10 @@ namespace NetMessageExt
 		void DoClearDealRenewalID(PlayerTypes ePlayer1, PlayerTypes ePlayer2)
 		{
 			gDLL->sendMoveGreatWorks(ePlayer1, static_cast<int>(ePlayer1), static_cast<int>(ePlayer2), -1, -1, -1, 1006);
+		}
+		void DoSwapGreatWorksHuman(PlayerTypes ePlayer, bool bSwap) // MPPATCH: C-005
+		{
+			gDLL->sendMoveGreatWorks(ePlayer, bSwap ? 1 : 0, -1, -1, -1, -1, 1007);
 		}
 	}
 
@@ -307,6 +316,20 @@ namespace NetMessageExt
 		void DoClearDealRenewalID(PlayerTypes ePlayer1, PlayerTypes ePlayer2)
 		{
 			GC.getGame().GetGameDeals().SetRenewDealID(ePlayer1, ePlayer2, -1);
+		}
+		// MPPATCH: C-005. The Culture Overview's "Optimize" button rearranged the player's great works on that PC only
+		// (Lua called CvPlayerCulture::DoSwapGreatWorksHuman directly), so in network games it now arrives here on every PC.
+		void DoSwapGreatWorksHuman(PlayerTypes ePlayer, bool bSwap)
+		{
+			ASSERT(!IsPlayerInvalid(ePlayer), "DoSwapGreatWorksHuman: invalid ePlayer from network");
+			if (IsPlayerInvalid(ePlayer))
+				return;
+
+			CvPlayer& kPlayer = GET_PLAYER(ePlayer);
+			if (!kPlayer.isAlive())
+				return;
+
+			kPlayer.GetCulture()->DoSwapGreatWorksHuman(bSwap);
 		}
 	}
 }

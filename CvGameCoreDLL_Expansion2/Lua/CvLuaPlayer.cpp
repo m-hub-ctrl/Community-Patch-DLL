@@ -4253,7 +4253,12 @@ int CvLuaPlayer::lDoSwapGreatWorksHuman(lua_State* L)
 {
 	CvPlayerAI* pkPlayer = GetInstance(L);
 	bool bSwap = lua_toboolean(L, 2);
-	pkPlayer->GetCulture()->DoSwapGreatWorksHuman(bSwap);
+	// MPPATCH: C-005 (docs/DESYNC_INVESTIGATION.md). Called from the UI ("Optimize" in the Culture Overview), so in a
+	// network game it ran on one PC only and the great works moved there alone. Send it to every PC instead.
+	if (GC.getGame().isNetworkMultiPlayer())
+		NetMessageExt::Send::DoSwapGreatWorksHuman(pkPlayer->GetID(), bSwap);
+	else
+		pkPlayer->GetCulture()->DoSwapGreatWorksHuman(bSwap);
 	return 0;
 }
 //------------------------------------------------------------------------------
