@@ -6470,6 +6470,19 @@ void CvGame::mpPatchTestModeOnUpdate()
 	}
 }
 
+// MPPATCH: test mode only. With ActivePlayer=N the active player is an AI-played civ, and single-player-only code
+// shows it AI leader scenes (e.g. CvDiplomacyAI::DeclareWar's "!isNetworkMultiplayerGame() && active player ==" branch);
+// the game then waits for a human to close the scene (late-game run 20261104-111215-late-activeplayer-b hung at turn
+// 112 on "WAR DECLARED!"). The scenes guarded with this are display-only (state is changed before them) and never
+// open in network games, so hiding them changes nothing. Lua can't close them: its update events don't run during
+// autoplay (runs 20261104-124928/130554-dialog-debug*). Always false outside test mode or for a human.
+bool CvGame::mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const
+{
+	if (!m_bMPPatchTestActive || eShownTo == NO_PLAYER)
+		return false;
+	return !GET_PLAYER(eShownTo).isHuman();
+}
+
 void CvGame::mpPatchTestModeOnTurn()
 {
 	if (!m_bMPPatchTestActive || m_bMPPatchTestDone)

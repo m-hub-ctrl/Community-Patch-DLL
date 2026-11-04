@@ -12854,7 +12854,7 @@ void CvUnit::PerformCultureBomb(int iRadius)
 				}
 
 				// Message for human if not at war
-				if (!bAlreadyShownLeader && !pPlayer->isHuman(ISHUMAN_AI_DIPLOMACY) && getTeam() != eOtherTeam && !GET_TEAM(eOtherTeam).isAtWar(getTeam()) && !CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == getOwner() && !MOD_DIPLOAI_SHUT_UP)
+				if (!bAlreadyShownLeader && !pPlayer->isHuman(ISHUMAN_AI_DIPLOMACY) && getTeam() != eOtherTeam && !GET_TEAM(eOtherTeam).isAtWar(getTeam()) && !CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == getOwner() && !MOD_DIPLOAI_SHUT_UP && !GC.getGame().mpPatchTestHideLeaderScene(getOwner())) // MPPATCH: test mode hides this display-only scene from an AI-played active player
 				{
 					bAlreadyShownLeader = true;
 

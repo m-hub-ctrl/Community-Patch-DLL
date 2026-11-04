@@ -7510,7 +7510,8 @@ void CvDiplomacyAI::ChangeNumCiviliansReturnedToMe(PlayerTypes ePlayer, int iCha
 			{
 				if (!GC.getGame().isNetworkMultiPlayer())	// KWG: Candidate for !GC.getGame().IsOption(GAMEOPTION_SIMULTANEOUS_TURNS)
 				{
-					if (GC.getGame().getActivePlayer() == ePlayer)
+					// MPPATCH: test mode hides this display-only scene from an AI-played active player (see CvGame::mpPatchTestHideLeaderScene)
+					if (GC.getGame().getActivePlayer() == ePlayer && !GC.getGame().mpPatchTestHideLeaderScene(ePlayer))
 					{
 						GC.GetEngineUserInterface()->SetForceDiscussionModeQuitOnBack(true); // Set force quit so that when discuss mode pops up the Back button won't go to leader root
 						const char* strText = GetDiploStringForMessage(DIPLO_MESSAGE_RETURNED_CIVILIAN);
@@ -27739,7 +27740,8 @@ bool CvDiplomacyAI::DeclareWar(PlayerTypes ePlayer)
 			}
 			else
 			{
-				if(!CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == ePlayer)
+				// MPPATCH: test mode hides this display-only scene from an AI-played active player (see CvGame::mpPatchTestHideLeaderScene)
+				if(!CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == ePlayer && !GC.getGame().mpPatchTestHideLeaderScene(ePlayer))
 				{
 					const char* strText = GetDiploStringForMessage(DIPLO_MESSAGE_DOW_ROOT, ePlayer);
 					gDLL->GameplayDiplomacyAILeaderMessage(GetID(), DIPLO_UI_STATE_AI_DECLARED_WAR, strText, LEADERHEAD_ANIM_DECLARE_WAR);
@@ -27989,7 +27991,8 @@ void CvDiplomacyAI::DoAttackedCityStateStatement(PlayerTypes ePlayer, DiploState
 		{
 			GetPlayer()->GetMilitaryAI()->RequestCityAttack(ePlayer, 1);
 
-			if (GC.getGame().getActivePlayer() == ePlayer)
+			// MPPATCH: test mode hides this display-only scene from an AI-played active player (see CvGame::mpPatchTestHideLeaderScene)
+			if (GC.getGame().getActivePlayer() == ePlayer && !GC.getGame().mpPatchTestHideLeaderScene(ePlayer))
 			{
 				const char* strText = GetDiploStringForMessage(DIPLO_MESSAGE_ATTACKED_WARMONGER);
 				gDLL->GameplayDiplomacyAILeaderMessage(GetID(), DIPLO_UI_STATE_BLANK_DISCUSSION, strText, LEADERHEAD_ANIM_HATE_NEGATIVE);
@@ -28103,7 +28106,8 @@ void CvDiplomacyAI::DoBulliedCityStateStatement(PlayerTypes ePlayer, DiploStatem
 		{
 			GetPlayer()->GetMilitaryAI()->RequestCityAttack(ePlayer, 1);
 
-			if (GC.getGame().getActivePlayer() == ePlayer)
+			// MPPATCH: test mode hides this display-only scene from an AI-played active player (see CvGame::mpPatchTestHideLeaderScene)
+			if (GC.getGame().getActivePlayer() == ePlayer && !GC.getGame().mpPatchTestHideLeaderScene(ePlayer))
 			{
 				const char* strText = GetDiploStringForMessage(DIPLO_MESSAGE_ATTACKED_WARMONGER);
 				gDLL->GameplayDiplomacyAILeaderMessage(GetID(), DIPLO_UI_STATE_BLANK_DISCUSSION, strText, LEADERHEAD_ANIM_HATE_NEGATIVE);
@@ -58065,7 +58069,8 @@ void CvDiplomacyAI::DoLiberatedFromVassalage(TeamTypes eTeam, bool bSkipPopup)
 				CvDiplomacyRequests::SendRequest(GetID(), eMasterPlayer, DIPLO_UI_STATE_BLANK_DISCUSSION, strText, LEADERHEAD_ANIM_POSITIVE);
 			}
 		}
-		else if (!CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == eMasterPlayer)
+		// MPPATCH: test mode hides this display-only scene from an AI-played active player (see CvGame::mpPatchTestHideLeaderScene)
+		else if (!CvPreGame::isNetworkMultiplayerGame() && GC.getGame().getActivePlayer() == eMasterPlayer && !GC.getGame().mpPatchTestHideLeaderScene(eMasterPlayer))
 		{
 			const char* strText = GetDiploStringForMessage(DIPLO_MESSAGE_VASSALAGE_LIBERATED_HUMAN, eMasterPlayer);
 			gDLL->GameplayDiplomacyAILeaderMessage(GetID(), DIPLO_UI_STATE_BLANK_DISCUSSION, strText, LEADERHEAD_ANIM_POSITIVE);
