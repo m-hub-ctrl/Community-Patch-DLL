@@ -1228,6 +1228,7 @@ void CvGame::uninit()
 	m_bMPPatchTestQuickSave = false;
 	m_bMPPatchTestResume = false;
 	m_bMPPatchTestResumed = false;
+	m_iMPPatchTestResumeRefresh = 0;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -5438,6 +5439,11 @@ int CvGame::getAIAutoPlay() const
 //	--------------------------------------------------------------------------------
 void CvGame::setAIAutoPlay(int iNewValue, PlayerTypes eReturnAsPlayer)
 {
+	// MPPATCH: resume mode (C-001): the autostart Lua turns the autoplay back on with the marker value right after
+	// saving; apply the optional load-style cache refresh now, before any player plays on.
+	if (m_bMPPatchTestActive && m_bMPPatchTestDone && m_bMPPatchTestResume && !m_bMPPatchTestResumed && m_iMPPatchTestResumeRefresh != 0 && iNewValue >= MPPATCH_TEST_RESUME_AUTOPLAY)
+		mpPatchTestResumeRefresh();
+
 	int iOldValue = getAIAutoPlay();
 
 	if(iOldValue != iNewValue)
@@ -6425,6 +6431,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 			iActivePlayer = atoi(szLine + 13);
 		else if (strncmp(szLine, "Resume=", 7) == 0)
 			m_bMPPatchTestResume = atoi(szLine + 7) != 0;
+		else if (strncmp(szLine, "ResumeRefresh=", 14) == 0)
+			m_iMPPatchTestResumeRefresh = atoi(szLine + 14);
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
 		// test runs (no AI logs, no RandCalls.csv), so test mode switches them on itself. Logging only.
 		// Every VP log also needs GC.getLogging(), which was false in test runs too (2da1f5cea alone gave no AI logs).
@@ -6498,6 +6506,28 @@ bool CvGame::mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const
 	if (!m_bMPPatchTestActive || eShownTo == NO_PLAYER)
 		return false;
 	return !GET_PLAYER(eShownTo).isHuman();
+}
+
+// MPPATCH: C-001 bisection. A load runs CvPlayerManager::Refresh (via DoGameStarted), which rebuilds caches the
+// live game last built at other moments. ResumeRefresh=<mask> does the same steps when the autostart Lua resumes the
+// autoplay (called from setAIAutoPlay: right after the save, the same moment a fresh load starts from), so a resume
+// run that turns into the fresh-load run names the cache: 1 plot found values, 2 area-effect units, 4 area-effect
+// plots, 8 military stats, 16 current/future wars, 32 monopoly cache. Test mode only.
+void CvGame::mpPatchTestResumeRefresh()
+{
+	for (int iPlayerLoop = 0; iPlayerLoop < MAX_PLAYERS; iPlayerLoop++)
+	{
+		CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iPlayerLoop);
+		if (!kPlayer.isAlive())
+			continue;
+		if (m_iMPPatchTestResumeRefresh & 1) kPlayer.invalidatePlotFoundValues();
+		if (m_iMPPatchTestResumeRefresh & 2) kPlayer.UpdateAreaEffectUnits();
+		if (m_iMPPatchTestResumeRefresh & 4) kPlayer.UpdateAreaEffectPlots();
+		if (m_iMPPatchTestResumeRefresh & 8) kPlayer.UpdateMilitaryStats();
+		if (m_iMPPatchTestResumeRefresh & 16) kPlayer.UpdateCurrentAndFutureWars();
+		if (m_iMPPatchTestResumeRefresh & 32) kPlayer.UpdateMonopolyCache();
+	}
+	MPPatchTestLog(CvString::format("resume: load-style cache refresh at turn %d, mask %d", getGameTurn(), m_iMPPatchTestResumeRefresh));
 }
 
 void CvGame::mpPatchTestModeOnTurn()
