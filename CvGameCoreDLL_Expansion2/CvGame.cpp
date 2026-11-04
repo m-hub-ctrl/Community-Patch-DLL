@@ -6527,6 +6527,10 @@ void CvGame::mpPatchTestResumeRefresh()
 		if (m_iMPPatchTestResumeRefresh & 16) kPlayer.UpdateCurrentAndFutureWars();
 		if (m_iMPPatchTestResumeRefresh & 32) kPlayer.UpdateMonopolyCache();
 	}
+	// 64: the trade path caches (m_aPotentialTradePaths*, m_lastTradePathUpdate; not saved, rebuilt lazily once a turn)
+	if (m_iMPPatchTestResumeRefresh & 64) GetGameTrade()->InvalidateTradePathCache();
+	// 128: the per-city longest potential trade route (not saved; set with map::insert, so never updated in a live game)
+	if (m_iMPPatchTestResumeRefresh & 128) GetGameTrade()->MPPatchTestClearLongestPotentialTradeRoutes();
 	MPPatchTestLog(CvString::format("resume: load-style cache refresh at turn %d, mask %d", getGameTurn(), m_iMPPatchTestResumeRefresh));
 }
 

@@ -239,6 +239,8 @@ public:
 	void UpdateTradePathCache(PlayerTypes ePlayer1);
 	void InvalidateTradePathCache();
 	void InvalidateTradePathCache(PlayerTypes ePlayer);
+	// MPPATCH: test mode only (C-001 bisection): forget the unsaved per-city longest potential route, as a load does
+	void MPPatchTestClearLongestPotentialTradeRoutes() { m_aiLongestPotentialTradeRoute.clear(); }
 	void InvalidateTradePathTeamCache(TeamTypes eTeam);
 
 	void SetLongestPotentialTradeRoute(int iValue, int iCityIndex, DomainTypes eDomain);
