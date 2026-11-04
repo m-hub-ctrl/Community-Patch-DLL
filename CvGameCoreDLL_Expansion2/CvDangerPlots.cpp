@@ -296,6 +296,22 @@ void CvDangerPlots::UpdateDangerInternal(const PlotIndexContainer& plotsToIgnore
 			}
 		}
 	}
+	// MPPATCH: C-001 (docs/DESYNC_INVESTIGATION.md). The reload case (neither turn change nor war change: rebuilding the
+	// unsaved danger map after a game was loaded) left out the danger from the vanished units, which the turn-change
+	// pass of the live game had added; m_vanishedUnits is saved. So right after a load (in multiplayer: right after a
+	// resync) the AI saw less danger than the PC that made the save, its units moved differently and the game desynced
+	// again. Re-apply them here, as the turn-change pass did. A live game takes the same path as before.
+	else if (!bWarChange)
+	{
+		for (UnitSet::iterator it = m_vanishedUnits.begin(); it != m_vanishedUnits.end(); ++it)
+		{
+			if (ShouldIgnorePlayer(it->first))
+				continue;
+			CvUnit* pVanishedUnit = GET_PLAYER(it->first).getUnit(it->second);
+			if (pVanishedUnit)
+				UpdateDangerSingleUnit(pVanishedUnit, true, plotsToIgnoreForZOC);
+		}
+	}
 
 	for(int iPlotLoop = 0; iPlotLoop < GC.getMap().numPlots(); iPlotLoop++)
 	{
