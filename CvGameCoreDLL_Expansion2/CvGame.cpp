@@ -1226,6 +1226,8 @@ void CvGame::uninit()
 	m_bMPPatchTestActive = false;
 	m_bMPPatchTestDone = false;
 	m_bMPPatchTestQuickSave = false;
+	m_bMPPatchTestResume = false;
+	m_bMPPatchTestResumed = false;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -6421,6 +6423,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 			bQuickSave = atoi(szLine + 15) != 0;
 		else if (strncmp(szLine, "ActivePlayer=", 13) == 0)
 			iActivePlayer = atoi(szLine + 13);
+		else if (strncmp(szLine, "Resume=", 7) == 0)
+			m_bMPPatchTestResume = atoi(szLine + 7) != 0;
 	}
 	fclose(pFile);
 	if (bQuickSave)
@@ -6485,8 +6489,22 @@ bool CvGame::mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const
 
 void CvGame::mpPatchTestModeOnTurn()
 {
-	if (!m_bMPPatchTestActive || m_bMPPatchTestDone)
+	if (!m_bMPPatchTestActive)
 		return;
+	if (m_bMPPatchTestDone)
+	{
+		// MPPATCH: resume mode (Resume=1; P2/P3 experiment for C-001). After DONE the autostart Lua saves like reload
+		// mode, then, instead of loading the save, turns the autoplay back on with the marker value; test mode then
+		// plays Turns more in the same process. Comparing this run with a fresh load of its own save shows whether
+		// the save restores everything (identical) or loses state (different).
+		if (!m_bMPPatchTestResume || m_bMPPatchTestResumed || getAIAutoPlay() < MPPATCH_TEST_RESUME_AUTOPLAY)
+			return;
+		m_bMPPatchTestResumed = true;
+		m_bMPPatchTestDone = false;
+		m_iMPPatchTestStartTurn = getGameTurn();
+		setAIAutoPlay(m_iMPPatchTestTurns + 1, NO_PLAYER);
+		MPPatchTestLog(CvString::format("test mode resumed at turn %d (no reload), turns %d", m_iMPPatchTestStartTurn, m_iMPPatchTestTurns));
+	}
 
 	int iDone = getGameTurn() - m_iMPPatchTestStartTurn;
 	debugSyncChecksum();
