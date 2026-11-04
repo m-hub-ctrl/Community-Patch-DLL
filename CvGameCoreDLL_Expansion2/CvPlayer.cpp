@@ -10872,8 +10872,12 @@ void CvPlayer::updateTimers()
 
 	if (MOD_CORE_DELAYED_VISIBILITY)
 	{
-		// Force explicit visibility update for killed units (but not if the player is currently active)
-		if (!unitsToDelete.empty() && GetID()!=GC.getGame().getActivePlayer())
+		// Force explicit visibility update for killed units
+		// MPPATCH: EXPERIMENT (C-002, docs/DESYNC_INVESTIGATION.md): no longer skipped for the active player. Every PC
+		// runs this for every player but each has a different active player, so the skip left a human's team
+		// visibility (m_aiVisibilityCountThisTurnMax, read by gameplay) different between PCs until the next flip.
+		// Original: if (!unitsToDelete.empty() && GetID()!=GC.getGame().getActivePlayer())
+		if (!unitsToDelete.empty())
 			for (int iI = 0; iI < GC.getMap().numPlots(); iI++)
 				GC.getMap().plotByIndexUnchecked(iI)->flipVisibility(getTeam());
 	}
