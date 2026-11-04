@@ -6427,10 +6427,17 @@ void CvGame::mpPatchTestModeOnUpdate()
 			m_bMPPatchTestResume = atoi(szLine + 7) != 0;
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
 		// test runs (no AI logs, no RandCalls.csv), so test mode switches them on itself. Logging only.
+		// Every VP log also needs GC.getLogging(), which was false in test runs too (2da1f5cea alone gave no AI logs).
 		else if (strncmp(szLine, "AILog=", 6) == 0 && atoi(szLine + 6) != 0)
+		{
+			GC.setLogging(true);
 			GC.setAILogging(true);
+		}
 		else if (strncmp(szLine, "RandLog=", 8) == 0 && atoi(szLine + 8) != 0)
+		{
+			GC.setLogging(true);
 			GC.setRandLogging(atoi(szLine + 8));
+		}
 	}
 	fclose(pFile);
 	if (bQuickSave)
