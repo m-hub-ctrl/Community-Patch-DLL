@@ -6852,6 +6852,12 @@ void CvPlot::setOwner(PlayerTypes eNewValue, int iAcquiringCityID, bool bCheckUn
 		// ACTUALLY CHANGE OWNERSHIP HERE
 		setOwningCity(eNewValue, iAcquiringCityID);
 		m_eOwner = eNewValue;
+		// MPPATCH: C-008 (docs/DESYNC_INVESTIGATION.md). The closest-city maps (tactical zones, settling, ...) break
+		// distance ties by current plot ownership but were only rebuilt when a city was founded or removed, so a live game
+		// kept the ownership of that moment while a load (in multiplayer: a resync) rebuilt them with today's: border
+		// plots and the enemy units on them landed in other cities' zones and the AI moved differently. Rebuild (lazily,
+		// on the next use) after every ownership change, so both always reflect the current state.
+		GC.getGame().SetClosestCityMapDirty();
 
 		if (MOD_EVENTS_TILE_IMPROVEMENTS) {
 			GAMEEVENTINVOKE_HOOK(GAMEEVENT_TileOwnershipChanged, getX(), getY(), getOwner(), eOldOwner);
