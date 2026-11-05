@@ -45811,6 +45811,13 @@ void CvPlayer::Serialize(Player& player, Visitor& visitor)
 			player.m_pFlavorManager->AddFlavorRecipient(player.m_pPlayerTechs, false /*bPropogateFlavors*/);
 			player.m_pFlavorManager->AddFlavorRecipient(player.m_pPlayerPolicies, false /*bPropogateFlavors*/);
 			player.m_pFlavorManager->AddFlavorRecipient(player.m_pWonderProductionAI, false /*bPropogateFlavors*/);
+			// MPPATCH: C-007 (docs/DESYNC_INVESTIGATION.md). Unlike techs and policies, the wonder AI doesn't save its copy of
+			// the flavors, so after a load it was all zeros while the live game had the active flavors. Its FlavorUpdate()
+			// adds the copy to its saved wonder weights on every flavor change, so after a load (in multiplayer: on the PC
+			// that resynced) the weights grew differently, the AI picked another wonder and the game desynced again.
+			// Restore the copy from the saved active flavors (a non-city recipient always holds exactly those; both are
+			// loaded above). Save format unchanged; a live game never runs this.
+			player.m_pWonderProductionAI->RestoreLatestFlavors(player.m_pFlavorManager->GetAllActiveFlavors());
 		}
 	}
 

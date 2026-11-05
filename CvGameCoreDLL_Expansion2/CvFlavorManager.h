@@ -35,6 +35,8 @@ public:
 	void ChangeFlavors(const CvEnumMap<FlavorTypes, int>& piDeltaFlavorValues, const char* reason, bool effectstart);
 
 	int GetLatestFlavorValue(FlavorTypes eFlavor, bool bAllowNegative = false);
+	// MPPATCH: C-007. Put back the local flavor copy after a load, without FlavorUpdate() (for recipients that don't save it).
+	void RestoreLatestFlavors(const CvEnumMap<FlavorTypes, int>& piFlavorValues);
 
 protected:
 
@@ -88,6 +90,8 @@ public:
 	int GetPersonalityIndividualFlavor(FlavorTypes eType);
 	CvEnumMap<FlavorTypes, int>& GetAllPersonalityFlavors();
 	int GetPersonalityFlavorForDiplomacy(FlavorTypes eType);
+	// MPPATCH: C-007. The active flavors = what every non-city recipient last received (see RestoreLatestFlavors).
+	const CvEnumMap<FlavorTypes, int>& GetAllActiveFlavors() const { return m_piActiveFlavor; }
 
 private:
 

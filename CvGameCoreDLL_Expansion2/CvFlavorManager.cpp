@@ -85,6 +85,16 @@ void CvFlavorRecipient::ChangeFlavors(const CvEnumMap<FlavorTypes, int>& piDelta
 	FlavorUpdate();
 }
 
+// MPPATCH: C-007 (docs/DESYNC_INVESTIGATION.md). Copy only; no FlavorUpdate(), which would add to accumulated weights.
+void CvFlavorRecipient::RestoreLatestFlavors(const CvEnumMap<FlavorTypes, int>& piFlavorValues)
+{
+	if (!piFlavorValues.valid())
+		return;
+
+	for (int iI = 0; iI < GC.getNumFlavorTypes(); iI++)
+		m_piLatestFlavorValues[iI] = piFlavorValues[iI];
+}
+
 /// LatestFlavorValue Accessor Function
 int CvFlavorRecipient::GetLatestFlavorValue(FlavorTypes eFlavor, bool bAllowNegative)
 {
