@@ -541,13 +541,6 @@ void CvGameTrade::UpdateTradePathCache(PlayerTypes ePlayer1)
 
 	SetTradePathsCacheUpdateCounter(ePlayer1, GC.getGame().getGameTurn());
 
-	// MPPATCH: C-006 (docs/DESYNC_INVESTIGATION.md). The per-city longest potential trade route is one shared, unsaved map
-	// written first-come (map::insert) and it scales real trade route yields (GetTradeConnectionDistanceValueModifierTimes100).
-	// The UI thread also runs this function, for the active player's cities and from the UI path cache, so on each PC the
-	// local player's values came from that PC's UI: different between PCs. Only the game core thread sets it now.
-	if (!gDLL->IsGameCoreThread())
-		return;
-
 	for (CvCity* pOriginCity = kPlayer1.firstCity(&iOriginCityLoop); pOriginCity != NULL; pOriginCity = kPlayer1.nextCity(&iOriginCityLoop))
 	{
 		int iDistanceLand = kPlayer1.GetTrade()->GetTradeRouteRange(DOMAIN_LAND, pOriginCity);
