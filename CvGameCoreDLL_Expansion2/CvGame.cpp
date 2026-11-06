@@ -6526,6 +6526,8 @@ void CvGame::mpPatchTestResumeRefresh()
 		if (m_iMPPatchTestResumeRefresh & 8) kPlayer.UpdateMilitaryStats();
 		if (m_iMPPatchTestResumeRefresh & 16) kPlayer.UpdateCurrentAndFutureWars();
 		if (m_iMPPatchTestResumeRefresh & 32) kPlayer.UpdateMonopolyCache();
+		// MPPATCH: 256: the tactical analysis map (not saved, built once per turn; a load rebuilds it later in the turn)
+		if (m_iMPPatchTestResumeRefresh & 256) kPlayer.GetTacticalAI()->GetTacticalAnalysisMap()->Invalidate();
 	}
 	// 64: the trade path caches (m_aPotentialTradePaths*, m_lastTradePathUpdate; not saved, rebuilt lazily once a turn)
 	if (m_iMPPatchTestResumeRefresh & 64) GetGameTrade()->InvalidateTradePathCache();
