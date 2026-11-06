@@ -894,6 +894,8 @@ protected:
 	bool m_bMPPatchTestResume;   // Resume=1: after DONE, restart when Lua turns autoplay back on (MPPATCH_TEST_RESUME_AUTOPLAY)
 	bool m_bMPPatchTestResumed;
 	int m_iMPPatchTestResumeRefresh; // ResumeRefresh=<bit mask>: cache refreshes a load does, applied at the resume (C-001 bisection)
+	bool m_bMPPatchTestHoldAtDone; // MPPATCH: HoldAtDone=1: hold all moves after the first DONE until the reload (turn-boundary save)
+	bool m_bMPPatchTestHolding;
 	int m_iMPPatchTestTurns;
 	int m_iMPPatchTestStartTurn;
 	bool m_bNukesValid;

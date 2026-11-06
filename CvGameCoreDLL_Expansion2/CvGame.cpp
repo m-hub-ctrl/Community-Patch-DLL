@@ -1229,6 +1229,8 @@ void CvGame::uninit()
 	m_bMPPatchTestResume = false;
 	m_bMPPatchTestResumed = false;
 	m_iMPPatchTestResumeRefresh = 0;
+	m_bMPPatchTestHoldAtDone = false;
+	m_bMPPatchTestHolding = false;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -6433,6 +6435,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 			m_bMPPatchTestResume = atoi(szLine + 7) != 0;
 		else if (strncmp(szLine, "ResumeRefresh=", 14) == 0)
 			m_iMPPatchTestResumeRefresh = atoi(szLine + 14);
+		else if (strncmp(szLine, "HoldAtDone=", 11) == 0)   // MPPATCH: turn-boundary reload test (see updateMoves)
+			m_bMPPatchTestHoldAtDone = atoi(szLine + 11) != 0;
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
 		// test runs (no AI logs, no RandCalls.csv), so test mode switches them on itself. Logging only.
 		// Every VP log also needs GC.getLogging(), which was false in test runs too (2da1f5cea alone gave no AI logs).
@@ -6567,6 +6571,12 @@ void CvGame::mpPatchTestModeOnTurn()
 	if (iDone >= m_iMPPatchTestTurns)
 	{
 		m_bMPPatchTestDone = true;
+		// MPPATCH: HoldAtDone (see updateMoves); only before the reload/resume, not at the run's final DONE
+		if (m_bMPPatchTestHoldAtDone && !m_bMPPatchTestResumed)
+		{
+			m_bMPPatchTestHolding = true;
+			MPPatchTestLog("holding all moves until the save (HoldAtDone)");
+		}
 		if (m_bMPPatchTestQuickSave)
 		{
 			gDLL->SaveGame(SAVEGAME_QUICK);
@@ -9247,6 +9257,12 @@ void CvGame::updateWar() const
 //	-----------------------------------------------------------------------------------------------
 void CvGame::updateMoves()
 {
+	// MPPATCH: test mode HoldAtDone=1 (turn-boundary reload test, C-009): after DONE nobody moves until the autostart
+	// Lua has saved and reloaded, so the save is taken at the turn boundary (after turn processing, before any unit
+	// moved) instead of after the first players' moves. Not saved; the reloaded game plays normally.
+	if (m_bMPPatchTestHolding)
+		return;
+
 	CvUnit* pLoopUnit = NULL;
 	int iLoop = 0;
 	int iI = 0;
