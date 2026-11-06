@@ -6528,7 +6528,11 @@ void CvGame::mpPatchTestResumeRefresh()
 		if (m_iMPPatchTestResumeRefresh & 32) kPlayer.UpdateMonopolyCache();
 		// MPPATCH: 256: the tactical analysis map (not saved, built once per turn; a load rebuilds it later in the turn)
 		if (m_iMPPatchTestResumeRefresh & 256) kPlayer.GetTacticalAI()->GetTacticalAnalysisMap()->Invalidate();
+		// MPPATCH: 1024: the danger maps (not saved; a load rebuilds them from the saved known/vanished units)
+		if (m_iMPPatchTestResumeRefresh & 1024) kPlayer.SetDangerPlotsDirty();
 	}
+	// MPPATCH: 512: the closest-city maps by plots / path length (not saved; a load marks them dirty)
+	if (m_iMPPatchTestResumeRefresh & 512) SetClosestCityMapDirty();
 	// 64: the trade path caches (m_aPotentialTradePaths*, m_lastTradePathUpdate; not saved, rebuilt lazily once a turn)
 	if (m_iMPPatchTestResumeRefresh & 64) GetGameTrade()->InvalidateTradePathCache();
 	// 128: the per-city longest potential trade route (not saved; set with map::insert, so never updated in a live game)
