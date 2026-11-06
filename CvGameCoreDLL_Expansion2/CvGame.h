@@ -336,6 +336,7 @@ public:
 	void mpPatchTestModeOnTurn();
 	bool mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const;
 	void mpPatchTestResumeRefresh();
+	void mpPatchTestLoadAudit(); // MPPATCH: per-turn consistency check of state a load loses (C-011, C-012); log only
 	// MPPATCH: resume mode: the autostart Lua turns autoplay back on with at least this many turns to ask for a resume
 #define MPPATCH_TEST_RESUME_AUTOPLAY 900
 	// MPPATCH: always-on drop forensics log (<Documents>\My Games\Sid Meier's Civilization 5\MPPatch_Net.log).

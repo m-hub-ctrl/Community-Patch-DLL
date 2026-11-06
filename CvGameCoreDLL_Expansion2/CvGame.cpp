@@ -6544,6 +6544,61 @@ void CvGame::mpPatchTestResumeRefresh()
 	MPPatchTestLog(CvString::format("resume: load-style cache refresh at turn %d, mask %d", getGameTurn(), m_iMPPatchTestResumeRefresh));
 }
 
+// MPPATCH: audit A8 candidates C-011 / C-012 (DESYNC_INVESTIGATION). Two unsaved values whose saved counterpart
+// survives a load; in an uninterrupted game they agree, after a load they shouldn't. Read-only, test mode only; one
+// "audit" line per turn in the test log, so a straight run (expected all 0) and a reload run can be compared.
+// C-011: an AI operation's slots that cities have committed to build (saved) vs the cities that remember building for
+//   an operation (CvCity::m_unitBeingBuiltForOperation, unsaved). unclaimed = committed - claiming cities, if > 0.
+// C-012: units with an active RequiresLeadership promotion (saved) vs CvUnit::IsRequiresLeadership (counter, unsaved).
+void CvGame::mpPatchTestLoadAudit()
+{
+	int iCommitted = 0, iClaimed = 0, iUnclaimed = 0;
+	int iLeaderUnits = 0, iLeaderMismatch = 0;
+	CvString strPlayers;
+	for (int iPlayerLoop = 0; iPlayerLoop < MAX_PLAYERS; iPlayerLoop++)
+	{
+		CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iPlayerLoop);
+		if (!kPlayer.isAlive())
+			continue;
+
+		int iPlayerCommitted = 0, iPlayerClaimed = 0;
+		for (size_t i = 0; i < kPlayer.getNumAIOperations(); i++)
+		{
+			CvAIOperation* pOp = kPlayer.getAIOperationByIndex(i);
+			if (pOp)
+				iPlayerCommitted += static_cast<int>(pOp->GetNumUnitsCommittedToBeBuilt());
+		}
+		int iLoop = 0;
+		for (const CvCity* pCity = kPlayer.firstCity(&iLoop); pCity != NULL; pCity = kPlayer.nextCity(&iLoop))
+			if (pCity->IsBuildingUnitForOperation())
+				iPlayerClaimed++;
+		iCommitted += iPlayerCommitted;
+		iClaimed += iPlayerClaimed;
+		if (iPlayerCommitted > iPlayerClaimed)
+		{
+			iUnclaimed += iPlayerCommitted - iPlayerClaimed;
+			strPlayers += CvString::format(" p%d:%d/%d", iPlayerLoop, iPlayerCommitted, iPlayerClaimed);
+		}
+
+		for (const CvUnit* pUnit = kPlayer.firstUnit(&iLoop); pUnit != NULL; pUnit = kPlayer.nextUnit(&iLoop))
+		{
+			bool bExpected = false;
+			for (int iPromotion = 0; iPromotion < GC.getNumPromotionInfos(); iPromotion++)
+			{
+				CvPromotionEntry* pkPromotion = GC.getPromotionInfo((PromotionTypes)iPromotion);
+				if (pkPromotion && pkPromotion->IsRequiresLeadership() && pUnit->isHasPromotion((PromotionTypes)iPromotion) && pUnit->isPromotionActive((PromotionTypes)iPromotion))
+					bExpected = true;
+			}
+			if (bExpected)
+				iLeaderUnits++;
+			if (bExpected != pUnit->IsRequiresLeadership())
+				iLeaderMismatch++;
+		}
+	}
+	MPPatchTestLog(CvString::format("audit turn %d: C-011 committed %d claimed %d unclaimed %d%s; C-012 active leadership units %d mismatched %d",
+		getGameTurn(), iCommitted, iClaimed, iUnclaimed, strPlayers.c_str(), iLeaderUnits, iLeaderMismatch));
+}
+
 void CvGame::mpPatchTestModeOnTurn()
 {
 	if (!m_bMPPatchTestActive)
@@ -6567,6 +6622,7 @@ void CvGame::mpPatchTestModeOnTurn()
 	debugSyncChecksum();
 	MPPatchTestHeartbeat(getGameTurn(), iDone, m_iMPPatchTestTurns);
 	MPPatchTestLog(CvString::format("turn %d reached (%d of %d)", getGameTurn(), iDone, m_iMPPatchTestTurns));
+	mpPatchTestLoadAudit();
 
 	if (iDone >= m_iMPPatchTestTurns)
 	{
