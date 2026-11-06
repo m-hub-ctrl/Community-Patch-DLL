@@ -6576,6 +6576,11 @@ void CvGame::mpPatchTestModeOnTurn()
 		{
 			m_bMPPatchTestHolding = true;
 			MPPatchTestLog("holding all moves until the save (HoldAtDone)");
+			// MPPATCH: end the autoplay now. It was set to Turns+1, so one turn is left, and the autostart Lua saves
+			// only once the autoplay has run out; with all moves held that turn never ends (run
+			// 20261106-083729-late-reload-boundary-b hung here). Same call the normal countdown at the end of doTurn
+			// makes (changeAIAutoPlay -> setAIAutoPlay(0, return player)), one turn earlier.
+			setAIAutoPlay(0, m_eAIAutoPlayReturnPlayer);
 		}
 		if (m_bMPPatchTestQuickSave)
 		{
