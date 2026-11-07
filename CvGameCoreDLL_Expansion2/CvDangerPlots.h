@@ -99,7 +99,7 @@ public:
 
 	void SetDirty();
 	bool IsDirty() const { return m_bDirty; }
-	void RebuildAsOnLoad(); // MPPATCH: C-009/C-014, D-021 option A (see the .cpp)
+	void MarkRebuildAsOnLoad(); // MPPATCH: C-009/C-014, D-021 option A (see the .cpp)
 
 	template<typename DangerPlots, typename Visitor>
 	static void Serialize(DangerPlots& dangerPlots, Visitor& visitor);
@@ -123,6 +123,7 @@ protected:
 	PlayerTypes m_ePlayer;
 	bool m_bDirty;
 	int m_iTurnBuilt;
+	bool m_bRebuildAsReload; // MPPATCH: not serialized; see MarkRebuildAsOnLoad
 	vector<CvDangerPlotContents> m_DangerPlots; //not serialized!
 	UnitSet m_knownUnits;
 	UnitSet m_vanishedUnits;

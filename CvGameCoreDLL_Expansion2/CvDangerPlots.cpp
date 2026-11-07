@@ -28,6 +28,7 @@ CvDangerPlots::CvDangerPlots(void)
 	: m_ePlayer(NO_PLAYER)
 	, m_bDirty(false)
 	, m_iTurnBuilt(-1)
+	, m_bRebuildAsReload(false)
 	, m_DangerPlots()
 {
 }
@@ -52,6 +53,7 @@ void CvDangerPlots::Uninit()
 	m_ePlayer = NO_PLAYER;
 	m_bDirty = false;
 	m_iTurnBuilt = -1;
+	m_bRebuildAsReload = false;
 	vector<CvDangerPlotContents>().swap(m_DangerPlots);
 	m_knownUnits.clear();
 	m_vanishedUnits.clear();
@@ -117,7 +119,11 @@ void CvDangerPlots::UpdateDanger()
 	// * new turn (enemy units moved). update both both m_knownUnits / m_vanishedUnits
 	// * dirty flag (war state change, new enemies). update m_knownUnits, keep m_vanishedUnits
 
-	bool bReload = (m_iTurnBuilt == -1);
+	// MPPATCH: C-009/C-014 (see MarkRebuildAsOnLoad): a map marked during this turn is rebuilt the way a load does.
+	// Only within the turn it was built in: a mark still pending at the next turn processing must not skip the
+	// turn-change bookkeeping (known/vanished units).
+	bool bReload = (m_iTurnBuilt == -1) || (m_bRebuildAsReload && m_iTurnBuilt == GC.getGame().getGameTurn());
+	m_bRebuildAsReload = false;
 	bool bTurnChange = !bReload && (m_iTurnBuilt != GC.getGame().getGameTurn());
 	bool bWarChange = !bReload && !bTurnChange;
 
@@ -598,6 +604,7 @@ void CvDangerPlots::Read(FDataStream& kStream)
 	m_bDirty = true;
 	//use this as a marker for the update mode
 	m_iTurnBuilt = -1;
+	m_bRebuildAsReload = false; // MPPATCH: not saved
 }
 
 /// writes out danger plots info
@@ -622,19 +629,23 @@ FDataStream& operator<<(FDataStream& stream, const CvDangerPlots& dangerPlots)
 void CvDangerPlots::SetDirty()
 {
 	m_bDirty = true;
+	// MPPATCH: a war change rebuilds with its own bookkeeping (known units refreshed), as before MarkRebuildAsOnLoad
+	m_bRebuildAsReload = false;
 }
 
-// MPPATCH: C-009 / C-014 (docs/DESYNC_INVESTIGATION.md), D-021 option A. Rebuild the map now the way a load does
-// (m_iTurnBuilt -1 = the reload case: keep the saved known/vanished units, take everything else from the current
-// game). A live game otherwise keeps the map built in the player's turn processing (doTurnPostDiplomacy), before the
-// later players' processing and moves; a loaded game rebuilt it from the state at the save, so its AI moved
-// differently (late reload test: Player 01/02/barbarians at turn 111). Called before each AI unit update, the map
-// then depends only on saved and current state, the same on every PC and after a load. Eager, not lazy: a map left
-// at -1 into the next turn would skip the turn-change bookkeeping.
-void CvDangerPlots::RebuildAsOnLoad()
+// MPPATCH: C-009 / C-014 (docs/DESYNC_INVESTIGATION.md), D-021 option A. Mark the map to be rebuilt on its next
+// read the way a load rebuilds it (reload case: keep the saved known/vanished units, take everything else from the
+// current game). A live game otherwise keeps the map built in the player's turn processing (doTurnPostDiplomacy),
+// before the later players' processing and moves; a loaded game rebuilt it from the state at the load, so AIs moved
+// differently (late reload test: Player 01/02/barbarians at turn 111). Every AI's map is marked when an AI starts
+// its unit update (CvPlayerAI::AI_unitUpdate), because AIs also read other players' maps (CvTacticalAI.cpp, the
+// enemy's GetPossibleAttackers); rebuilding only the mover's own map (build 5.4.8-32) changed nothing. A map then
+// depends only on saved state and the state at its first read after the mark, the same on every PC and after a
+// load. Lazy, so only maps that are read are rebuilt.
+void CvDangerPlots::MarkRebuildAsOnLoad()
 {
-	m_iTurnBuilt = -1;
-	UpdateDanger();
+	m_bRebuildAsReload = true;
+	m_bDirty = true;
 }
 
 // Get the maximum damage a non-specified unit could receive at this plot in the next turn

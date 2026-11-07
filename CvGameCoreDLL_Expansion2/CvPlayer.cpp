@@ -9773,6 +9773,12 @@ void CvPlayer::SetDangerPlotsDirty()
 	m_pDangerPlots->SetDirty();
 }
 
+// MPPATCH: C-009 / C-014, D-021 option A (see CvDangerPlots::MarkRebuildAsOnLoad)
+void CvPlayer::MarkDangerPlotsRebuildAsOnLoad()
+{
+	m_pDangerPlots->MarkRebuildAsOnLoad();
+}
+
 bool CvPlayer::isHuman(IsHumanReason eIsHumanReason) const
 {
 	if (GetID() == NO_PLAYER)

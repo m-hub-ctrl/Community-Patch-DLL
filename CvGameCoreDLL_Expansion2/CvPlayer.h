@@ -248,6 +248,7 @@ public:
 	int GetNumUnitsInProduction(DomainTypes eDomain, bool bMilitaryOnly);
 	void UpdateDangerPlots();
 	void SetDangerPlotsDirty();
+	void MarkDangerPlotsRebuildAsOnLoad(); // MPPATCH: C-009/C-014, see CvDangerPlots::MarkRebuildAsOnLoad
 
 	bool isHuman(IsHumanReason eIsHumanReason = OTHER_ISHUMAN_REASON) const;
 	bool isObserver() const;

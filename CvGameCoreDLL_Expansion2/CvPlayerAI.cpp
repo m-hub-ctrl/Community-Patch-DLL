@@ -272,10 +272,20 @@ void CvPlayerAI::AI_unitUpdate(bool bUpdateHomelandAI)
 		return;
 	}
 
-	// MPPATCH: C-009 / C-014, D-021 option A: plan with a danger map rebuilt from the current state the way a load
-	// rebuilds it, not the one from this player's turn processing; otherwise a PC that loaded (resync, rejoin) moves
-	// these units differently. See CvDangerPlots::RebuildAsOnLoad.
-	m_pDangerPlots->RebuildAsOnLoad();
+	// MPPATCH: C-009 / C-014, D-021 option A: plan with danger maps rebuilt from the current state the way a load
+	// rebuilds them, not the ones from the players' turn processing; otherwise a PC that loaded (resync, rejoin) moves
+	// these units differently. All AI players' maps, not only ours: the tactical AI also reads enemies' maps. AI
+	// updates only: they run identically on every PC (D-021 assumption, P5), the human-automation branch below may
+	// not, and human players' maps keep their turn-processing build. See CvDangerPlots::MarkRebuildAsOnLoad.
+	if (!isHuman(ISHUMAN_AI_UNITS))
+	{
+		for (int iPlayerLoop = 0; iPlayerLoop < MAX_PLAYERS; iPlayerLoop++)
+		{
+			CvPlayer& kLoopPlayer = GET_PLAYER((PlayerTypes)iPlayerLoop);
+			if (kLoopPlayer.isAlive() && !kLoopPlayer.isHuman(ISHUMAN_AI_UNITS))
+				kLoopPlayer.MarkDangerPlotsRebuildAsOnLoad();
+		}
+	}
 
 	if(isHuman(ISHUMAN_AI_UNITS))
 	{
