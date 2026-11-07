@@ -6547,6 +6547,14 @@ void CvGame::mpPatchTestResumeRefresh()
 		if (m_iMPPatchTestResumeRefresh & 256) kPlayer.GetTacticalAI()->GetTacticalAnalysisMap()->Invalidate();
 		// MPPATCH: 1024: the danger maps (not saved; a load rebuilds them from the saved known/vanished units)
 		if (m_iMPPatchTestResumeRefresh & 1024) kPlayer.SetDangerPlotsDirty();
+		// MPPATCH: 2048: the cities' most deficient / abundant yield (CvCityStrategyAI::PrecalcYieldStats; not saved,
+		// computed in the city strategy's DoTurn and again in CvCity::read from the yields at the load; C-009 candidate)
+		if (m_iMPPatchTestResumeRefresh & 2048)
+		{
+			int iCityLoop = 0;
+			for (CvCity* pLoopCity = kPlayer.firstCity(&iCityLoop); pLoopCity != NULL; pLoopCity = kPlayer.nextCity(&iCityLoop))
+				pLoopCity->GetCityStrategyAI()->PrecalcYieldStats();
+		}
 	}
 	// MPPATCH: 512: the closest-city maps by plots / path length (not saved; a load marks them dirty)
 	if (m_iMPPatchTestResumeRefresh & 512) SetClosestCityMapDirty();
