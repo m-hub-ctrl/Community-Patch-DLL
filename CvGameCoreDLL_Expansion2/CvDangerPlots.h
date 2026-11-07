@@ -99,6 +99,7 @@ public:
 
 	void SetDirty();
 	bool IsDirty() const { return m_bDirty; }
+	void RebuildAsOnLoad(); // MPPATCH: C-009/C-014, D-021 option A (see the .cpp)
 
 	template<typename DangerPlots, typename Visitor>
 	static void Serialize(DangerPlots& dangerPlots, Visitor& visitor);

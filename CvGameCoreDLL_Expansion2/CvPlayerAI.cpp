@@ -272,6 +272,11 @@ void CvPlayerAI::AI_unitUpdate(bool bUpdateHomelandAI)
 		return;
 	}
 
+	// MPPATCH: C-009 / C-014, D-021 option A: plan with a danger map rebuilt from the current state the way a load
+	// rebuilds it, not the one from this player's turn processing; otherwise a PC that loaded (resync, rejoin) moves
+	// these units differently. See CvDangerPlots::RebuildAsOnLoad.
+	m_pDangerPlots->RebuildAsOnLoad();
+
 	if(isHuman(ISHUMAN_AI_UNITS))
 	{
 		CvUnit::dispatchingNetMessage(true);

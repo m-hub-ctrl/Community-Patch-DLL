@@ -624,6 +624,19 @@ void CvDangerPlots::SetDirty()
 	m_bDirty = true;
 }
 
+// MPPATCH: C-009 / C-014 (docs/DESYNC_INVESTIGATION.md), D-021 option A. Rebuild the map now the way a load does
+// (m_iTurnBuilt -1 = the reload case: keep the saved known/vanished units, take everything else from the current
+// game). A live game otherwise keeps the map built in the player's turn processing (doTurnPostDiplomacy), before the
+// later players' processing and moves; a loaded game rebuilt it from the state at the save, so its AI moved
+// differently (late reload test: Player 01/02/barbarians at turn 111). Called before each AI unit update, the map
+// then depends only on saved and current state, the same on every PC and after a load. Eager, not lazy: a map left
+// at -1 into the next turn would skip the turn-change bookkeeping.
+void CvDangerPlots::RebuildAsOnLoad()
+{
+	m_iTurnBuilt = -1;
+	UpdateDanger();
+}
+
 // Get the maximum damage a non-specified unit could receive at this plot in the next turn
 int CvDangerPlotContents::GetDanger(bool bFixedDamageOnly)
 {
