@@ -1231,6 +1231,7 @@ void CvGame::uninit()
 	m_iMPPatchTestResumeRefresh = 0;
 	m_bMPPatchTestHoldAtDone = false;
 	m_bMPPatchTestHolding = false;
+	m_iMPPatchTestHoldAfterPlayer = -1;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -6447,6 +6448,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 			m_iMPPatchTestResumeRefresh = atoi(szLine + 14);
 		else if (strncmp(szLine, "HoldAtDone=", 11) == 0)   // MPPATCH: turn-boundary reload test (see updateMoves)
 			m_bMPPatchTestHoldAtDone = atoi(szLine + 11) != 0;
+		else if (strncmp(szLine, "HoldAfterPlayer=", 16) == 0)   // MPPATCH: fixed mid-turn save point (see updateMoves)
+			m_iMPPatchTestHoldAfterPlayer = atoi(szLine + 16);
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
 		// test runs (no AI logs, no RandCalls.csv), so test mode switches them on itself. Logging only.
 		// Every VP log also needs GC.getLogging(), which was false in test runs too (2da1f5cea alone gave no AI logs).
@@ -9333,6 +9336,28 @@ void CvGame::updateMoves()
 	// moved) instead of after the first players' moves. Not saved; the reloaded game plays normally.
 	if (m_bMPPatchTestHolding)
 		return;
+	// MPPATCH: test mode HoldAfterPlayer=N (mid-turn reload test, C-009): the autostart Lua saves after a few idle
+	// frames once the autoplay has run out (turn DONE+1), and the game core looks idle between AI players, so how many
+	// AIs had moved before the save depended on timing (suite on build 30: 4 players; builds 27/28: 2). AIs move one at
+	// a time in index order (loop below), so holding once the first AI still to move is past N fixes the save point:
+	// AIs 0..N have moved, the rest haven't. Not saved; never set outside test runs.
+	if (m_bMPPatchTestActive && m_bMPPatchTestDone && !m_bMPPatchTestHoldAtDone && !m_bMPPatchTestResumed && m_iMPPatchTestHoldAfterPlayer >= 0 && getAIAutoPlay() == 0)
+	{
+		for (int iPlayer = 0; iPlayer < MAX_PLAYERS; iPlayer++)
+		{
+			const CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iPlayer);
+			if (kPlayer.isAlive() && kPlayer.isTurnActive() && !kPlayer.isHuman())
+			{
+				if (iPlayer > m_iMPPatchTestHoldAfterPlayer)
+				{
+					m_bMPPatchTestHolding = true;
+					MPPatchTestLog(CvString::format("holding all moves until the save (HoldAfterPlayer=%d; next to move: player %d)", m_iMPPatchTestHoldAfterPlayer, iPlayer));
+					return;
+				}
+				break;
+			}
+		}
+	}
 
 	CvUnit* pLoopUnit = NULL;
 	int iLoop = 0;

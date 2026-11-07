@@ -897,6 +897,7 @@ protected:
 	int m_iMPPatchTestResumeRefresh; // ResumeRefresh=<bit mask>: cache refreshes a load does, applied at the resume (C-001 bisection)
 	bool m_bMPPatchTestHoldAtDone; // MPPATCH: HoldAtDone=1: hold all moves after the first DONE until the reload (turn-boundary save)
 	bool m_bMPPatchTestHolding;
+	int m_iMPPatchTestHoldAfterPlayer; // MPPATCH: HoldAfterPlayer=N: in the turn after DONE, hold once AIs 0..N have moved (fixed mid-turn save point)
 	int m_iMPPatchTestTurns;
 	int m_iMPPatchTestStartTurn;
 	bool m_bNukesValid;
