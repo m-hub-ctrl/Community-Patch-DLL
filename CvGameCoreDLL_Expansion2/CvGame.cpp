@@ -5438,6 +5438,8 @@ int CvGame::getAIAutoPlay() const
 	return m_iAIAutoPlay;
 }
 
+static void MPPatchTestLog(const CvString& strMsg); // MPPATCH: test mode log, defined with the other test mode code below
+
 //	--------------------------------------------------------------------------------
 void CvGame::setAIAutoPlay(int iNewValue, PlayerTypes eReturnAsPlayer)
 {
@@ -5445,6 +5447,14 @@ void CvGame::setAIAutoPlay(int iNewValue, PlayerTypes eReturnAsPlayer)
 	// saving; apply the optional load-style cache refresh now, before any player plays on.
 	if (m_bMPPatchTestActive && m_bMPPatchTestDone && m_bMPPatchTestResume && !m_bMPPatchTestResumed && m_iMPPatchTestResumeRefresh != 0 && iNewValue >= MPPATCH_TEST_RESUME_AUTOPLAY)
 		mpPatchTestResumeRefresh();
+	// MPPATCH: resume + HoldAtDone (C-014 lead a): only a load cleared the hold, so a resume stayed held forever (the
+	// held turn never ends, so mpPatchTestModeOnTurn's resume branch is never reached). Release it here, after the
+	// refresh above, like a load: caches rebuilt first, then players move.
+	if (m_bMPPatchTestActive && m_bMPPatchTestDone && m_bMPPatchTestResume && !m_bMPPatchTestResumed && m_bMPPatchTestHolding && iNewValue >= MPPATCH_TEST_RESUME_AUTOPLAY)
+	{
+		m_bMPPatchTestHolding = false;
+		MPPatchTestLog("hold released at the resume (HoldAtDone)");
+	}
 
 	int iOldValue = getAIAutoPlay();
 
