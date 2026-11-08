@@ -899,6 +899,10 @@ protected:
 	bool m_bMPPatchTestHoldAtDone; // MPPATCH: HoldAtDone=1: hold all moves after the first DONE until the reload (turn-boundary save)
 	bool m_bMPPatchTestHolding;
 	int m_iMPPatchTestHoldAfterPlayer; // MPPATCH: HoldAfterPlayer=N: in the turn after DONE, hold once AIs 0..N have moved (fixed mid-turn save point)
+	int m_iMPPatchTestHoldMidPlayer; // MPPATCH: HoldMidPlayer=P,K: in the turn after DONE, hold before AI P's K-th unit update (save inside P's moves)
+	int m_iMPPatchTestHoldMidCalls;
+	int m_iMPPatchTestHoldMidSeen; // unit updates of the AI currently moving (logged when it is done), -1 = none yet
+	int m_iMPPatchTestHoldMidSeenPlayer;
 	bool m_bMPPatchTestNoDangerFix; // MPPATCH: NoDangerFix=1: switch off the C-009/C-014 danger map fix (CvPlayerAI::AI_unitUpdate), test only
 	int m_iMPPatchTestTurns;
 	int m_iMPPatchTestStartTurn;

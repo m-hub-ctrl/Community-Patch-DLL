@@ -1233,6 +1233,10 @@ void CvGame::uninit()
 	m_bMPPatchTestHolding = false;
 	m_iMPPatchTestHoldAfterPlayer = -1;
 	m_bMPPatchTestNoDangerFix = false;
+	m_iMPPatchTestHoldMidPlayer = -1;
+	m_iMPPatchTestHoldMidCalls = 0;
+	m_iMPPatchTestHoldMidSeen = -1;
+	m_iMPPatchTestHoldMidSeenPlayer = -1;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -6453,6 +6457,12 @@ void CvGame::mpPatchTestModeOnUpdate()
 			m_iMPPatchTestHoldAfterPlayer = atoi(szLine + 16);
 		// MPPATCH: NoDangerFix=1 plays as VP did before the C-009/C-014 fix, so a test can show it fails without it
 		// (D-008 before-check). Read again after each load, before any move (update() runs this before updateMoves()).
+		else if (strncmp(szLine, "HoldMidPlayer=", 14) == 0)   // MPPATCH: save inside an AI's moves (see updateMoves)
+		{
+			m_iMPPatchTestHoldMidPlayer = atoi(szLine + 14);
+			const char* szComma = strchr(szLine + 14, ',');
+			m_iMPPatchTestHoldMidCalls = szComma ? atoi(szComma + 1) : 1;
+		}
 		else if (strncmp(szLine, "NoDangerFix=", 12) == 0)
 			m_bMPPatchTestNoDangerFix = atoi(szLine + 12) != 0;
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
@@ -9369,6 +9379,39 @@ void CvGame::updateMoves()
 					MPPatchTestLog(CvString::format("holding all moves until the save (HoldAfterPlayer=%d; next to move: player %d)", m_iMPPatchTestHoldAfterPlayer, iPlayer));
 					return;
 				}
+				break;
+			}
+		}
+	}
+	// MPPATCH: test mode HoldMidPlayer=P,K (C-009): a load between two AIs' moves (HoldAfterPlayer) did not split the
+	// game even without the danger map fix (2026-11-08, builds 34 and 36); the old failing runs had saved while an AI
+	// was still moving (its moves span several AI_unitUpdate calls: the call returns early while units are busy). So
+	// hold just before AI P's K-th unit update that will do work (no busy unit). Counts per AI are logged so K can be
+	// chosen; if P finishes in fewer, the hold comes after P (logged). Not saved; never set outside test runs.
+	if (m_bMPPatchTestActive && m_bMPPatchTestDone && !m_bMPPatchTestHoldAtDone && !m_bMPPatchTestResumed && m_iMPPatchTestHoldMidPlayer >= 0 && getAIAutoPlay() == 0)
+	{
+		for (int iPlayer = 0; iPlayer < MAX_PLAYERS; iPlayer++)
+		{
+			CvPlayer& kPlayer = GET_PLAYER((PlayerTypes)iPlayer);
+			if (kPlayer.isAlive() && kPlayer.isTurnActive() && !kPlayer.isHuman())
+			{
+				if (iPlayer != m_iMPPatchTestHoldMidSeenPlayer)
+				{
+					if (m_iMPPatchTestHoldMidSeenPlayer >= 0)
+						MPPatchTestLog(CvString::format("HoldMidPlayer: player %d moved in %d unit updates", m_iMPPatchTestHoldMidSeenPlayer, m_iMPPatchTestHoldMidSeen));
+					m_iMPPatchTestHoldMidSeenPlayer = iPlayer;
+					m_iMPPatchTestHoldMidSeen = 0;
+				}
+				bool bWorks = !kPlayer.hasBusyUnitOrCity();
+				if (iPlayer > m_iMPPatchTestHoldMidPlayer || (iPlayer == m_iMPPatchTestHoldMidPlayer && bWorks && m_iMPPatchTestHoldMidSeen + 1 >= m_iMPPatchTestHoldMidCalls))
+				{
+					m_bMPPatchTestHolding = true;
+					MPPatchTestLog(CvString::format("holding all moves until the save (HoldMidPlayer=%d,%d; player %d after %d unit updates%s)", m_iMPPatchTestHoldMidPlayer, m_iMPPatchTestHoldMidCalls,
+						iPlayer, m_iMPPatchTestHoldMidSeen, iPlayer > m_iMPPatchTestHoldMidPlayer ? ": player P had finished, NOT inside its moves" : ""));
+					return;
+				}
+				if (bWorks)
+					m_iMPPatchTestHoldMidSeen++;
 				break;
 			}
 		}
