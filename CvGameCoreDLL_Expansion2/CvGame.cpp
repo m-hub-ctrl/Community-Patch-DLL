@@ -1232,6 +1232,7 @@ void CvGame::uninit()
 	m_bMPPatchTestHoldAtDone = false;
 	m_bMPPatchTestHolding = false;
 	m_iMPPatchTestHoldAfterPlayer = -1;
+	m_bMPPatchTestNoDangerFix = false;
 	m_iMPPatchTestTurns = 0;
 	m_iMPPatchTestStartTurn = 0;
 	m_bNukesValid = false;
@@ -6450,6 +6451,10 @@ void CvGame::mpPatchTestModeOnUpdate()
 			m_bMPPatchTestHoldAtDone = atoi(szLine + 11) != 0;
 		else if (strncmp(szLine, "HoldAfterPlayer=", 16) == 0)   // MPPATCH: fixed mid-turn save point (see updateMoves)
 			m_iMPPatchTestHoldAfterPlayer = atoi(szLine + 16);
+		// MPPATCH: NoDangerFix=1 plays as VP did before the C-009/C-014 fix, so a test can show it fails without it
+		// (D-008 before-check). Read again after each load, before any move (update() runs this before updateMoves()).
+		else if (strncmp(szLine, "NoDangerFix=", 12) == 0)
+			m_bMPPatchTestNoDangerFix = atoi(szLine + 12) != 0;
 		// MPPATCH: diagnostics for P3 (C-001/C-006). config.ini's AILog / RandLog keys did not reach the DLL in
 		// test runs (no AI logs, no RandCalls.csv), so test mode switches them on itself. Logging only.
 		// Every VP log also needs GC.getLogging(), which was false in test runs too (2da1f5cea alone gave no AI logs).
@@ -6465,6 +6470,8 @@ void CvGame::mpPatchTestModeOnUpdate()
 		}
 	}
 	fclose(pFile);
+	if (m_bMPPatchTestNoDangerFix)
+		MPPatchTestLog("NoDangerFix=1: the C-009/C-014 danger map fix is off"); // MPPATCH: the harness checks this line
 	if (bQuickSave)
 	{
 		// MPPATCH: gDLL->SaveGame(SAVEGAME_QUICK) inside doTurn never returns (the game hangs; P1 step 1.4).

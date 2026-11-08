@@ -277,7 +277,8 @@ void CvPlayerAI::AI_unitUpdate(bool bUpdateHomelandAI)
 	// these units differently. All AI players' maps, not only ours: the tactical AI also reads enemies' maps. AI
 	// updates only: they run identically on every PC (D-021 assumption, P5), the human-automation branch below may
 	// not, and human players' maps keep their turn-processing build. See CvDangerPlots::MarkRebuildAsOnLoad.
-	if (!isHuman(ISHUMAN_AI_UNITS))
+	// Test mode NoDangerFix=1 switches it off (before-checks only; never set outside harness runs).
+	if (!isHuman(ISHUMAN_AI_UNITS) && !GC.getGame().isMPPatchTestNoDangerFix())
 	{
 		for (int iPlayerLoop = 0; iPlayerLoop < MAX_PLAYERS; iPlayerLoop++)
 		{

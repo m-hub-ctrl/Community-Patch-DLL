@@ -337,6 +337,7 @@ public:
 	bool mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const;
 	void mpPatchTestResumeRefresh();
 	void mpPatchTestLoadAudit(); // MPPATCH: per-turn consistency check of state a load loses (C-011, C-012); log only
+	bool isMPPatchTestNoDangerFix() const { return m_bMPPatchTestNoDangerFix; } // MPPATCH: test mode NoDangerFix=1 (before-checks of C-009/C-014)
 	// MPPATCH: resume mode: the autostart Lua turns autoplay back on with at least this many turns to ask for a resume
 #define MPPATCH_TEST_RESUME_AUTOPLAY 900
 	// MPPATCH: always-on drop forensics log (<Documents>\My Games\Sid Meier's Civilization 5\MPPatch_Net.log).
@@ -898,6 +899,7 @@ protected:
 	bool m_bMPPatchTestHoldAtDone; // MPPATCH: HoldAtDone=1: hold all moves after the first DONE until the reload (turn-boundary save)
 	bool m_bMPPatchTestHolding;
 	int m_iMPPatchTestHoldAfterPlayer; // MPPATCH: HoldAfterPlayer=N: in the turn after DONE, hold once AIs 0..N have moved (fixed mid-turn save point)
+	bool m_bMPPatchTestNoDangerFix; // MPPATCH: NoDangerFix=1: switch off the C-009/C-014 danger map fix (CvPlayerAI::AI_unitUpdate), test only
 	int m_iMPPatchTestTurns;
 	int m_iMPPatchTestStartTurn;
 	bool m_bNukesValid;
