@@ -526,6 +526,7 @@ void CvLuaGame::RegisterMembers(lua_State* L)
 	Method(AddUIAddinToMPMP);
 
 	Method(GetMPPatchVersion); // MPPATCH
+	Method(MPPatchTestHoldPending); // MPPATCH: test mode only
 }
 //------------------------------------------------------------------------------
 
@@ -4271,5 +4272,13 @@ LUAAPIIMPL(Game, AddUIAddinToMPMP)
 int CvLuaGame::lGetMPPatchVersion(lua_State* L)
 {
 	lua_pushstring(L, MPPATCH_VERSION);
+	return 1;
+}
+//------------------------------------------------------------------------------
+// MPPATCH: bool Game.MPPatchTestHoldPending(): test mode, a HoldAfterPlayer/HoldMidPlayer hold is set but not reached
+// yet, so the harness's autostart Lua waits before saving (CvGame::mpPatchTestHoldPending). Read only.
+int CvLuaGame::lMPPatchTestHoldPending(lua_State* L)
+{
+	lua_pushboolean(L, GC.getGame().mpPatchTestHoldPending());
 	return 1;
 }

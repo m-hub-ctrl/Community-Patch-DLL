@@ -9354,6 +9354,19 @@ void CvGame::updateWar() const
 }
 
 //	-----------------------------------------------------------------------------------------------
+// MPPATCH: test mode, for the autostart Lua (Game.MPPatchTestHoldPending). The Lua saves after ~120 idle frames once
+// the autoplay has run out, and the game core counts as idle while an AI's units are still busy, so with
+// HoldMidPlayer it saved inside AI P's moves but before the hold point (2026-11-08, build 37: no "holding" line).
+// While this returns true the Lua keeps waiting, so the save comes at the hold. Same conditions as the holds in
+// updateMoves. Reads test fields only, changes nothing; false outside test runs.
+bool CvGame::mpPatchTestHoldPending() const
+{
+	if (!m_bMPPatchTestActive || !m_bMPPatchTestDone || m_bMPPatchTestHoldAtDone || m_bMPPatchTestResumed || m_bMPPatchTestHolding)
+		return false;
+	return m_iMPPatchTestHoldAfterPlayer >= 0 || m_iMPPatchTestHoldMidPlayer >= 0;
+}
+
+//	-----------------------------------------------------------------------------------------------
 void CvGame::updateMoves()
 {
 	// MPPATCH: test mode HoldAtDone=1 (turn-boundary reload test, C-009): after DONE nobody moves until the autostart

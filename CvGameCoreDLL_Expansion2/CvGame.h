@@ -337,6 +337,7 @@ public:
 	bool mpPatchTestHideLeaderScene(PlayerTypes eShownTo) const;
 	void mpPatchTestResumeRefresh();
 	void mpPatchTestLoadAudit(); // MPPATCH: per-turn consistency check of state a load loses (C-011, C-012); log only
+	bool mpPatchTestHoldPending() const; // MPPATCH: a HoldAfterPlayer/HoldMidPlayer hold is set but not reached yet (autostart Lua waits); read only
 	bool isMPPatchTestNoDangerFix() const { return m_bMPPatchTestNoDangerFix; } // MPPATCH: test mode NoDangerFix=1 (before-checks of C-009/C-014)
 	// MPPATCH: resume mode: the autostart Lua turns autoplay back on with at least this many turns to ask for a resume
 #define MPPATCH_TEST_RESUME_AUTOPLAY 900

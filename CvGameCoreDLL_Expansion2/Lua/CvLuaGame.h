@@ -515,6 +515,8 @@ protected:
 
 	// MPPATCH: our patch build ID (MPPATCH_VERSION), for UI scripts and the test harness
 	static int lGetMPPatchVersion(lua_State* L);
+	// MPPATCH: test mode: a HoldAfterPlayer/HoldMidPlayer hold is set but not reached yet (autostart Lua waits)
+	static int lMPPatchTestHoldPending(lua_State* L);
 };
 
 #endif //CVLUAGAME_H
